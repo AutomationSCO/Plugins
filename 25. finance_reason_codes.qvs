@@ -1,0 +1,55 @@
+// Reason Codes
+sale_reason_codes:
+LEFT KEEP (sale_basic)
+LOAD DISTINCT
+    "CSO Number" AS sale_service_id,
+    RC AS sale_reason_code,
+    Comment AS sale_reason_code_comment,
+    Highlight AS sale_reason_code_highlight,
+    Recurrence AS sale_reason_code_recurrence
+FROM [lib://Geo_AMS/O2C AMS/BV Dashboard/Plugins/Reason Codes/RC.xlsx] (ooxml, embedded labels, table is O2C);
+
+sale_reason_codes_lonestar:
+LEFT KEEP (sale_basic)
+LOAD DISTINCT
+    "CSO Number" AS sale_service_id,
+    Capitalize(RC) AS sale_reason_code_lonestar
+FROM [lib://Geo_AMS/O2C AMS/BV Dashboard/Plugins/Reason Codes/RC.xlsx] (ooxml, embedded labels, table is [O2C Lonestar])
+;
+
+LEFT JOIN (sale_reason_codes_lonestar)
+LOAD
+    Capitalize(RC) AS sale_reason_code_lonestar,
+    Highlights AS sale_reason_code_highlights_lonestar
+FROM [lib://Geo_AMS/O2C AMS/BV Dashboard/Plugins/Reason Codes/RC.xlsx] (ooxml, embedded labels, table is [Highlights Lonestar])
+WHERE 
+    Brand='O2C';
+
+
+// Reason Codes
+buy_reason_codes:
+LEFT KEEP (buy_basic)
+LOAD DISTINCT
+    "SSO Number" AS buy_service_id,
+    RC AS buy_reason_code,
+    Comment AS buy_reason_code_comment,
+    Highlight AS buy_reason_code_highlight,
+    Recurrence AS buy_reason_code_recurrence
+FROM [lib://Geo_AMS/O2C AMS/BV Dashboard/Plugins/Reason Codes/RC.xlsx] (ooxml, embedded labels, table is P2P)
+;
+
+buy_reason_codes_lonestar:
+LEFT KEEP (buy_basic)
+LOAD DISTINCT
+    "SSO Number" AS buy_service_id,
+    Capitalize(RC) AS buy_reason_code_lonestar
+FROM [lib://Geo_AMS/O2C AMS/BV Dashboard/Plugins/Reason Codes/RC.xlsx] (ooxml, embedded labels, table is [P2P Lonestar])
+;
+
+LEFT JOIN (buy_reason_codes_lonestar)
+LOAD
+    Capitalize(RC) AS buy_reason_code_lonestar,
+    Highlights AS buy_reason_code_highlights_lonestar
+FROM [lib://Geo_AMS/O2C AMS/BV Dashboard/Plugins/Reason Codes/RC.xlsx] (ooxml, embedded labels, table is [Highlights Lonestar])
+WHERE 
+    Brand='P2P';

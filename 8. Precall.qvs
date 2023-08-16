@@ -1,0 +1,211 @@
+//precall ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+precall_tem:
+left keep(buy_basic)
+LOAD distinct
+    buy_service_id,
+    buy_LastEvent_reason_code as PC_Reason_Code,
+    Date(floor("buy_LastEvent_actual_datetime ")) as PC_actualD
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_buy_LastBE.qvd]
+(qvd)
+where match(buy_LastEvent_code,45,'E31')
+;
+
+
+precall_tem_mpo:
+noconcatenate
+load distinct
+    buy_service_id,
+    buy_service_nature
+
+resident buy_basic
+where buy_service_nature = 'DELIVERY';
+
+left join(precall_tem_mpo)
+load distinct
+    buy_service_id,
+    Date(floor(buy_LastEvent_actual_date)) as PC_actualD,
+    buy_LastEvent_code as PC_Reason_Code
+
+resident buy_last_be
+where buy_LastEvent_code = 'E31';
+
+
+concatenate(precall_tem)
+load distinct 
+    buy_service_id,
+    PC_actualD,
+    PC_Reason_Code
+
+resident precall_tem_mpo;
+
+drop table precall_tem_mpo;
+
+
+Last_Precall:
+left join (precall_tem)
+load 
+	buy_service_id,
+    date(Timestamp(max("PC_actualD"))) as precall_actual_date
+
+resident precall_tem
+group by buy_service_id;
+
+left join(precall_tem)
+Load distinct   
+    buy_service_id,
+    buy_end_date,
+    Carrier
+   
+
+resident buy_basic;
+
+
+left join(precall_tem)
+Load distinct   
+    buy_service_id,
+    sale_service_id
+    
+
+resident [sale-buy];
+
+
+left join(precall_tem)
+Load distinct
+    sale_service_id,
+    sale_service_execution_followup,
+    sale_contractor_party_Group_N1,
+    sale_service_end_name,
+    hu_reference,
+    sale_planned_end_date
+
+resident sale_basic;
+
+
+left join(precall_tem)
+LOAD
+    sale_service_id,
+    'net' as net_precall,
+    sale_event_code as cp_precall_envent_I,
+    date(sale_event_actual_date) as cp_precall_actual_date_event_I
+    //if(len(sale_LastEvent_code)< 2,0,1) as cp_precall_flag,
+    
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_BE.qvd](qvd)
+where match(sale_event_code,'I');
+
+
+
+Precall:
+NoConcatenate
+Load
+    buy_service_id,
+    PC_actualD,
+    precall_actual_date,
+    PC_Reason_Code,
+    cp_precall_envent_I,
+    cp_precall_actual_date_event_I,
+    net_precall,
+
+        If(isnull(precall_actual_date),'No Precall',
+            if(precall_actual_date = sale_planned_end_date, 'Correct','Incorrect')) as cp_precall_planned_date,
+
+    if(sale_service_execution_followup='CL','Delivered',
+        If( isnull(precall_actual_date),'No Precall',
+            if(precall_actual_date < '$(vToday)', 'Late',
+                if(precall_actual_date = '$(vToday)', 'Today',
+                    if(precall_actual_date = ('$(vToday)' + 1), 'Tomorrow',
+                        if(precall_actual_date <= '$(vToday)'+ 5, 'Next 2-5 Days','Future')))))) as precall_delivery_bracket,
+
+
+
+
+    if(net_precall = 'net','Excluded',
+        If(isnull(precall_actual_date),'No Precall',
+            IF(precall_actual_date = buy_end_date, 'On Time',
+                if(precall_actual_date > buy_end_date, 'Early',
+                    if(precall_actual_date < buy_end_date, 'Late'))))) as precall_bracket,
+
+    if(sale_contractor_party_Group_N1<>'IBM_FIGO','No',
+        if(wildmatch(sale_service_end_name,'*IBM*'),'No',
+            if(Wildmatch(Carrier,'FEDEX','GEO LOG US','GEODIS LOG','ESGARI*','INNOVATIVO'),'No',
+                IF(WildMatch(hu_reference,'G*'),'No','Yes')))) as "precall_required",
+
+if(net_precall = 'net','Excluded',
+    if(buy_end_date = precall_actual_date, 'Delivery on time',
+        if(buy_end_date - precall_actual_date <=-5, '>5 Days Early',
+            if(buy_end_date - precall_actual_date <=-2, '2 to 5 Days Early',    
+                if(buy_end_date - precall_actual_date =-1, '1 Day Early',
+                    if(buy_end_date - precall_actual_date = 1, '1 Day Late',
+                        if( buy_end_date - precall_actual_date <= 5,'2 to 5 Days Late',
+                            if( buy_end_date - precall_actual_date >= 5,'>5 Days Late'))))))))
+        
+             as precall_full_bracket
+
+
+resident precall_tem;
+
+drop table precall_tem;
+
+
+
+// 34. Late Precall-----------------------------------------------------------------------------------------------------
+
+
+[cp_precall_tem]:
+LEFT Keep ([Precall])
+LOAD Distinct
+
+    sale_service_id,
+    sale_service_execution_followup
+
+resident sale_basic;
+
+
+left join(cp_precall_tem)
+LOAD Distinct
+
+    sale_service_id,
+    buy_service_id 
+
+resident [sale-buy];
+
+left join(cp_precall_tem)
+Load Distinct
+    buy_service_id,
+    precall_bracket,
+    net_precall,
+    cp_precall_envent_I,
+    cp_precall_actual_date_event_I
+
+resident Precall;
+
+
+
+
+left join(cp_precall_tem)
+Load  distinct
+    DIMC,
+    buy_service_id
+
+resident DIMC;
+
+
+[cp_precall]:
+noconcatenate
+LOAD distinct
+
+    sale_service_id,
+    'Incorrect' as cp_late_precall
+
+resident cp_precall_tem
+where len(trim(DIMC)) < 1
+and not match(net_precall,'net')
+and len(trim(cp_precall_envent_I)) < 1
+and not match(precall_bracket,'On Time')
+and not match(sale_service_execution_followup,'NAP')
+;
+
+
+Drop Table  cp_precall_tem;

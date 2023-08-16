@@ -1,0 +1,7 @@
+
+LOAD
+    "Event Code" as,
+    Name as,
+    Source as 
+FROM [lib://Geo_AMS/Automation/BI/Events/Events Translate.xlsx]
+(ooxml, embedded labels, table is [BE Translate]);

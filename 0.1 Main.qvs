@@ -1,0 +1,7 @@
+//Mk: all 4pl scope
+let vDateBracke = date(addmonths('$(vToday)',-12),'DD/MM/YY');
+set vContractorZenith = 'IBM_FIGO','IBM_NCS','DT','SOFTLYR_MD','DC','NEWCUS','KSM','ALIGN','KYNDRYL','IBM_SO';
+set vContractorMpo = 'SCO_AMS_KEISER','SCO_COMPUTACENTER','SCO_AMS_WHITE_GLOVE','SCO_WW_SOLIDIGM';
+set vContractorNAP = 'IBM_FIGO','SOFTLYR_MD';
+set vLane = 'Inter Team','Intra Team';
+set vGeo2Geo = 'APACAPAC','APACEMEA','EMEAEMEA','EMEAAPAC';

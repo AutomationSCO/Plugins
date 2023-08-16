@@ -1,0 +1,64 @@
+carrierdex:
+left keep(sale_basic)
+LOAD
+    CARRIER as carrierdex_carrier,
+    LANE as sale_from_to_state
+FROM [lib://Geo_AMS/LogisticsAnalyst/Vendors/CarrierDex Data.xlsx]
+(ooxml, embedded labels, table is Lanes);
+
+left join(carrierdex)
+LOAD
+    CARRIER as carrierdex_carrier,
+    "PALLET JACK" as carrierdex_pallet_jack,
+    LIFTGATE as carrierdex_liftgate,
+    "INSIDE PICK UP" as carrierdex_IPU,
+    "SHRINK WRAP" as carrierdex_shrink_wrap,
+    LABOR as carrierdex_labor,
+    "FORK LIFT" as carrierdex_fork_lift,
+    "FLOOR PROTECTION" as carrierdex_floor_protection,
+    "DELIVERY APPOINTMENT" as carrierdex_delivery_appointment,
+    PALLETIZED as carrierdex_palletized,
+    "SPECIAL PACKAGING" as carrierdex_special_packaging,
+    "SECURITY REQUIRED"as carrierdex_security_required,
+    PACKAGING as carrierdex_packaging,
+    "PRE CALL" as carrierdex_precall,
+    "UNION MOVERS" as carrierdex_union_movers,
+    "DOLLY REQUIRED" as carrierdex_dolly_required,
+    "SHIPMENT ON CASTERS" as carrierdex_shipment_casters,
+    FTL as carrierdex_ftl,
+    HWA as carrierdex_hawv,
+    LTL as carrierdex_ltl,
+    SPECIALIZED as carrierdex_specialized,
+    "CLIMATE CONTROLLED TRUCK" as carrierdex_climate_truck,
+    "PADDED VAN" as carrierdex_padden_van,
+    "COI FORMAT" as carrierdex_coi_format,
+    "TEAM DRIVER" as carrierdex_team_driver,
+    "HAZARDOUS MATERIALS" as carrierdex_hazmat,
+    "FLATBED TRAILER" as carrierdex_flatbed,
+    "TRADESHOW - NCS" as carrierdex_ncs,
+    "UNDER 100 LBS" as carrierdex_under_100,
+    "UNDER 500 LBS" as carrierdex_under_500,
+    "OVER 500 LBS" as carrierdex_over_500,
+    GUAM as carrierdex_guam,
+    "PUERTO RICO" as carrierdex_puerto_rico,
+    "ARBO PACKAGING" as carrierdex_arbo_packaging,
+    "ARBO HANDLING" as carrierdex_arbo_handling,
+    "FIRST CONTACT" as carrierdex_first_contact,
+    "ESCALATION 1" as carrierdex_escalation1,
+    "ESCALATION 2" as carrierdex_escalation2,
+    COMMENTS as carrierdex_comments,
+    "PROCUREMENT OWNER" as carrierdex_procurement_owner
+FROM [lib://Geo_AMS/LogisticsAnalyst/Vendors/CarrierDex Data.xlsx]
+(ooxml, embedded labels, table is [Special Requirements]);
+
+LOAD
+    CARRIER as carrierdex_carrier,
+    "CSO Mode" as carrierdex_mode_vendors
+FROM [lib://Geo_AMS/LogisticsAnalyst/Vendors/CarrierDex Data.xlsx]
+(ooxml, embedded labels, table is CSO_Mode);
+
+LOAD
+    CARRIER as carrierdex_carrier,
+    "CSO Submode" as carrierdex_submode_vendors
+FROM [lib://Geo_AMS/LogisticsAnalyst/Vendors/CarrierDex Data.xlsx]
+(ooxml, embedded labels, table is CSO_Submode);

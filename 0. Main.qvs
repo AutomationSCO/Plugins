@@ -1,0 +1,221 @@
+//All variables for standar uses
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Access/Access.qvs]);
+
+SET ThousandSep=',';
+SET DecimalSep='.';
+SET MoneyThousandSep=' ';
+SET MoneyDecimalSep=',';
+SET MoneyFormat='# ##0,00 €;-# ##0,00 €';
+SET TimeFormat='hh:mm:ss';
+SET DateFormat='DD/MM/YYYY';
+SET TimestampFormat='DD/MMM/YYYY hh:mm:ss[.fff]';
+SET FirstWeekDay=0;
+SET BrokenWeeks=0;
+SET ReferenceDay=4;
+SET FirstMonthOfYear=1;
+SET CollationLocale='fr-FR';
+SET CreateSearchIndexOnReload=1;
+SET MonthNames='Jan;Feb;Mar;Apr.;May;Jun;Jul;Aug;Sept;Oct;Nov;Dec';
+SET LongMonthNames='January;February;March;April;May;June;July;August;September;October;November;December';
+SET DayNames='Mon.;Tue.;Wed.;Thur.;Fri.;Sat.;Sun.';
+SET LongDayNames='Monday;Tuesday;Wednesday;Thursday;Friday;Saturday;Sunday';
+SET NumericalAbbreviation='3:k;6:M;9:G;12:T;15:P;18:E;21:Z;24:Y;-3:m;-6:μ;-9:n;-12:p;-15:f;-18:a;-21:z;-24:y';
+let vTodayLocal = today();
+SET NullValue = 'Missing';
+Set vOpen1 = '';
+Set vOpen2 = '';
+Set vOpen3 = '';
+Let vTodayAMS = date(convertToLocalTime(now(), 'UTC-07:00', True()));
+let vTodayH = date(num(now() - (7/24)));
+let vToday_format = date(today(),'DD-MM-YYYY');
+let vToday = date('$(vTodayAMS)');
+let vYesterday = date('$(vTodayAMS)')-1;
+let vYesterdayYesterday = date('$(vTodayAMS)')-2;
+//let vToday = date('05/11/2021','DD/MM/YY');
+let vCurrentYear =  year('$(vToday)');
+let vCurrentMonth =  num(month('$(vToday)'),'00');
+let vPastWeek1 =  week('$(vToday)',0,0) - 1 ;
+let vCurrentWeek =  num(week('$(vToday)',0,0),'00');
+let vPastyear = year('$(vToday)')-1;
+let vPastPastyear = year('$(vToday)')-2;
+Let vPastPastPastyear = year('$(vToday)')-3;
+let vPastMonth =  if(num(month('$(vToday)') - 1,'00') = '00','12',num(month('$(vToday)') - 1,'00'));
+let vPastPastMonth =  num(month('$(vToday)') - 2,'00');
+let vLast12Months = date(addmonths('$(vToday)',-11),'DD/MM/YY');
+let vTodayDay = day('$(vToday)');
+let v6daysMonth = if('$(v6daysMonth)' = 1,'$(vCurrentMonth)' ,'$(vPastMonth)');
+let vCurrentYearMonth =  date(today(),'YYYY-MM');
+let vPastYearMonth =  date(addmonths(today(),- 1),'YYYY-MM');
+let vPastPastYearMonth =  date(addmonths(today(), - 2),'YYYY-MM');
+let vCurrentYearWeek = year(today()) &'-'& num(week(today(),0,0),'00');
+let vPastYearWeek = year(today()) &'-'& '$(vPastWeek1)';
+let vCurrectYearQuarter = year(today()) & '-Q' & ceil(month('$(vToday)')/3);
+let vPastYearQuarter =  if((ceil(month('$(vToday)')/3)-1) = 0,year(today())-1 & '-Q'&4,year(today()) & '-Q' & (ceil(month('$(vToday)')/3)-1));
+Set vPUEvent = '13','AF','E13','DLP';
+Set vDEEvent = 'D','21','A21','POD';
+set vCSO = 1;
+set vCarrier = 1; 
+set vInterpipes = 0;
+set vWhereInter = "
+not match((sale_start_geo & sale_end_geo),$(vGeo2Geo))
+and not match(sale_start_country&sale_end_country, 'CAUS','USMX','CAMX')
+//exclusion forzada del modelado
+and len(exclude_data_model) = 0 
+//exclusion de ordenes financieras
+and not match(sale_service_type,'TRADE_COMPLIANCE','FINANCE')
+//exclusion de partys de mpok
+and match(sale_mpo_party,'BP Exploration Alaska Inc','BP GULF OF MEXICO','Transport','BP TRINIDAD AND TOBAGO LLC')
+
+or 
+//geografias exluidas
+not match((sale_start_geo & sale_end_geo),$(vGeo2Geo)) 
+and not match(sale_start_country&sale_end_country, 'CAUS','USMX','CAMX')
+//exclusion forzada del modelado
+and len(exclude_data_model) = 0 
+//exclusion de ordenes financieras
+and len(sale_service_type)=0
+//exclusion de partys de mpok
+and match(sale_mpo_party,'BP Exploration Alaska Inc','BP GULF OF MEXICO','Transport','BP TRINIDAD AND TOBAGO LLC')";
+
+set vWhereAll = "
+not match((sale_start_geo & sale_end_geo),$(vGeo2Geo))
+//exclusion forzada del modelado
+and len(exclude_data_model) = 0 
+//exclusion de ordenes financieras
+and not match(sale_service_type,'TRADE_COMPLIANCE','FINANCE')
+//exclusion de partys de mpok
+and match(sale_mpo_party,'BP Exploration Alaska Inc','BP GULF OF MEXICO','Transport','BP TRINIDAD AND TOBAGO LLC')
+
+or 
+//geografias exluidas
+not match((sale_start_geo & sale_end_geo),$(vGeo2Geo)) 
+//exclusion forzada del modelado
+and len(exclude_data_model) = 0 
+//exclusion de ordenes financieras
+and len(sale_service_type)=0
+//exclusion de partys de mpok
+and match(sale_mpo_party,'BP Exploration Alaska Inc','BP GULF OF MEXICO','Transport','BP TRINIDAD AND TOBAGO LLC')";
+
+
+Set vZenith = "sale_service_id,
+    sale_incoterm,
+    sale_service_customer_status as sale_customer_status,
+    num(sale_local_amount) as sale_local_amount,
+    sale_local_currency,
+    sale_service_activity_report,
+    sale_service_activity_report_status,
+    APP_Source as sale_app_source,
+    sale_requested_SLA,
+    Party_Short_Name_sale_executor_party AS sale_executor_short_name,
+    Party_Short_Name_sale_contractor_party AS sale_contractor_party,
+    Date(If(IsNull(sale_actual_end_date), sale_planned_end_date_before, sale_actual_end_date)) AS sale_service_end_date,
+    SubField(sale_start_zone, '-', 1) AS sale_start_state,
+    SubField(sale_end_zone, '-', 1) AS sale_end_state,
+    sale_executed_SLA,
+    sale_service_execution_followup,
+    sale_service_short_name,
+    sale_service_type,
+    sale_start_country,
+    sale_start_zone as sale_start_zip_code,
+    sale_start_city,
+    sale_service_start_address,
+    sale_service_start_name,
+    sale_end_country,
+    sale_end_zone as sale_end_zip_code,
+    sale_end_city,
+    sale_service_end_address,
+    sale_service_end_name,
+    sale_creation_date,
+    sale_creation_datetime,
+    sale_actual_start_datetime,
+    sale_actual_end_datetime,
+    sale_service_nature,
+    sale_volume_m3,
+    sale_contractor_party_Group_N1,
+    num(sale_weight_kg,'# ###.000','.',' ') as sale_weight_kg,
+    num(sale_weight_kg,'# ###.000','.',' ') * 2.204 as sale_weight_lb,
+    sale_service_invoice_bursting as sale_invoice_bursting,      
+    sale_planned_start_date_before as sale_planned_start_date,
+    sale_planned_start_date_after as sale_planned_start_date_after,
+    date(round(sale_actual_start_date)) as sale_actual_start_date,
+    sale_planned_end_date_before as sale_planned_end_date,
+    sale_planned_end_date_after as sale_planned_end_date_after,
+    date(sale_actual_end_date) as sale_actual_end_date,
+    sale_requested_start_date_before,
+    sale_requested_start_date_after,
+    sale_requested_start_date_before as sale_requested_start_date,
+    sale_requested_start_datetime_before as sale_requested_start_datetime,
+    sale_requested_end_datetime_before as sale_requested_end_datetime,
+    sale_service_loading_number,
+    sale_requested_end_date_before,
+    sale_requested_end_date_after,
+    sale_requested_end_date_after as sale_requested_end_date,
+    sale_service_customer_reference,
+    sale_service_BusinessUnit,
+    sale_is_transport_dangerous,
+
+    sale_start_country & '-' & sale_end_country as sale_country2country,
+    if(match(sale_start_country&sale_end_country, 'CAUS','USMX','CAMX'),'No','Yes') as IntraAMS"
+
+;
+
+
+
+      
+
+Set vMPO = "sale_service_id,
+    sale_service_customer_status as sale_customer_status,
+    num(sale_local_amount) as sale_local_amount,
+    sale_local_currency,
+    APP_Source as sale_app_source, 
+    sale_contractor_party_Group_N1 AS sale_contractor_party,
+    Date(If(IsNull(sale_actual_end_date), sale_planned_end_date_before, sale_actual_end_date)) AS sale_service_end_date,
+    Trim(sale_executed_SLA) AS sale_executed_SLA,
+    if(match(sale_service_customer_status,'Booked','Pending collection'),'PLANNED',sale_service_status) as sale_service_execution_followup,
+    if(sale_contractor_party_Group_N2 = 'SCO_AMS_WHITE_GLOVE',sale_service_BusinessUnit,sale_contractor_party_Group_N2) as sale_service_short_name,
+    sale_start_country,
+    if(sale_start_country = 'US',left(sale_start_zone,5),sale_start_zone) as sale_start_zip_code,
+    upper(sale_start_city) as sale_start_city,
+    sale_service_start_address,
+    sale_service_start_name,
+    sale_service_invoice_bursting as sale_invoice_bursting,
+    sale_end_country,
+    if(sale_end_country = 'US',left(sale_end_zone,5),sale_end_zone) as sale_end_zip_code,
+    upper(sale_end_city) as sale_end_city,
+    sale_service_end_address,
+    sale_service_end_name,
+    sale_creation_date,
+    
+    sale_contractor_party_Group_N1 as sale_contractor_party_Group_N1,
+    num(sale_weight_kg,'# ###.000','.',' ') as sale_weight_kg,
+    num(sale_weight_kg,'# ###.000','.',' ') * 2.205 as sale_weight_lb,
+    sale_service_nature as sale_service_nature,
+    sale_planned_start_date_before as sale_planned_start_date,
+    sale_planned_start_date_after,
+
+    sale_requested_start_date_before as sale_requested_start_date,
+    sale_service_activity_report_status,
+    sale_service_type,
+    sale_planned_end_date_before as sale_planned_end_date,
+    sale_planned_end_date_after as sale_planned_end_date_after,
+    date(sale_actual_end_date) as sale_actual_end_date,
+    sale_creation_datetime,
+    sale_actual_start_datetime,
+    sale_actual_end_datetime,
+
+    
+    sale_requested_start_date_before,
+    sale_requested_start_date_after,
+    sale_requested_end_date_before,
+    sale_requested_end_date_after,
+    sale_requested_end_date_after as sale_requested_end_date,
+    sale_incoterm,
+    sale_service_customer_reference,
+    sale_service_system_id,
+    sale_is_transport_dangerous,
+    sale_requested_start_datetime_before as sale_requested_start_datetime,
+    sale_requested_end_datetime_before as sale_requested_end_datetime,
+    sale_service_BusinessUnit,
+    sale_start_country & '-' & sale_end_country as sale_country2country"
+;
+    

@@ -1,0 +1,18 @@
+PUKyndryl_Manual_input:
+left keep (sale_basic)
+LOAD distinct
+    "CSO Number" as sale_service_id,
+    "Late Responsible" as kyndryl_latePU_responsible,
+    "Comments K" as KyndrylPU_comments
+FROM [lib://Geo_AMS/LogisticsAnalyst/Vendors/KYNDRYL Visibility Report 2022.xlsx]
+(ooxml, embedded labels, table is Hoja1);
+
+
+DELKyndryl_Manual_input:
+left keep (sale_basic)
+LOAD distinct
+    "CSO Number Delivery" as sale_service_id,
+    "Late Responsible Delivery" as kyndryl_lateDel_responsible,
+    "Comments K Delivery" as Kyndryl_Del_comments
+FROM [lib://Geo_AMS/LogisticsAnalyst/Vendors/KYNDRYL Visibility Report 2022.xlsx]
+(ooxml, embedded labels, table is Hoja2);

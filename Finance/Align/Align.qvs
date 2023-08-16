@@ -1,0 +1,235 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Finance/Align/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Finance/Dashboard/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/4. HU_Items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/5. align_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/18. invoice_line.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/19. eorder_shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/21. eorder_HU.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/23. full_FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/26. sale_finance_service_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/33. eorder_hu_item.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/65. sale_last_be.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/74. sale_finance_invoice_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/77. eorder_shipment_align.qvs]);
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/4. Amount.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/31. net_on_time.qvs]);
+
+
+[align_specific_data]:
+left join(sale_basic)
+LOAD
+    sale_service_id,
+    if(sale_service_nature = 'TFTL', sale_executed_SLA, sale_service_nature) as Align_priority,
+    Year(sale_start_date)&'-'&Month(sale_start_date) as Join_Date,
+    if(monthend(sale_start_date)<=monthend('$(vToday)'),'Yes','No') as Show_Forecast,
+    RowNo() as Registro
+    
+    
+RESIDENT sale_basic;
+
+
+[Align_Adhoc]:
+Left Keep([sale_basic])
+ LOAD
+    sale_service_id,
+    if(sale_tariff_item = 'AD HOC USD',1,0) as [Adhoc Check]
+
+resident sale_tariff_items
+WHERE match(sale_tariff_item,'AD HOC USD');
+
+finance_zone_temp:
+noconcatenate
+load
+    sale_service_id,
+    sale_start_state,
+    sale_end_state,
+    sale_start_country
+resident sale_basic;
+
+left join(finance_zone_temp)
+load
+    sale_service_id,
+    sale_specific_info_SLA
+resident sale_service_specific_data;
+
+
+finance_zone:
+noconcatenate
+Load
+sale_service_id,
+    if(sale_specific_info_SLA='LTL',
+        if(sale_start_state='VT', 'Zone1',
+            if(match(sale_start_state='NY','CT','NJ'),'Zone2',
+                if(sale_start_state='PA','Zone3',
+                    if(match(sale_start_state='NC','SC','GA'),'Zone4',
+                        if(match(sale_start_state='TN','AR'),'Zone5',
+                            if(sale_start_state='FL','Zone6',
+                                if(sale_start_state='MN','Zone7',
+                                    if(sale_start_state='TX','Zone8',
+                                        if(match(sale_start_state,'MA','ME','NH','RI'),'Zone9',
+if(match(sale_start_state,'DC','DE','MD','VA','WV'),'Zone10',
+    if(match(sale_start_state,'AL','MS'),'Zone11',
+        if(match(sale_start_state,'IL','IN','KY','MI','OH','WI'),'Zone12',
+            if(match(sale_start_state,'LA','OK'),'Zone13',
+                if(match(sale_start_state,'IA','KS','MO','NE'),'Zone14',
+                    if(match(sale_start_state,'CO','MN','UT'),'Zone15',
+                        if(match(sale_start_state,'MT','ND','SD','WY'),'Zone16',
+                            if(match(sale_start_state,'AZ','CA','NV'),'Zone17',
+                                if(match(sale_start_state,'ID','OR','WA'),'Zone18',
+                                    if(match(sale_start_state,'AK','HI'),'Zone19',
+                                        if(sale_start_state='PR','Zone20',
+                                            if(sale_start_state='VI','Zone21',
+if(match(sale_start_state,'Guam'),'Zone22',
+    if(sale_start_country='CA','Canada')))))))))))))))))))))))) as sale_start_finance_zone,
+
+
+    if(sale_specific_info_SLA='LTL',
+        if(sale_end_state='VT', 'Zone1',
+            if(match(sale_end_state='NY','CT','NJ'),'Zone2',
+                if(sale_end_state='PA','Zone3',
+                    if(match(sale_end_state='NC','SC','GA'),'Zone4',
+                        if(match(sale_end_state='TN','AR'),'Zone5',
+                            if(sale_end_state='FL','Zone6',
+                                if(sale_end_state='MN','Zone7',
+                                    if(sale_end_state='TX','Zone8',
+                                        if(match(sale_end_state,'MA','ME','NH','RI'),'Zone9',
+if(match(sale_end_state,'DC','DE','MD','VA','WV'),'Zone10',
+    if(match(sale_end_state,'AL','MS'),'Zone11',
+        if(match(sale_end_state,'IL','IN','KY','MI','OH','WI'),'Zone12',
+            if(match(sale_end_state,'LA','OK'),'Zone13',
+                if(match(sale_end_state,'IA','KS','MO','NE'),'Zone14',
+                    if(match(sale_end_state,'CO','MN','UT'),'Zone15',
+                        if(match(sale_end_state,'MT','ND','SD','WY'),'Zone16',
+                            if(match(sale_end_state,'AZ','CA','NV'),'Zone17',
+                                if(match(sale_end_state,'ID','OR','WA'),'Zone18',
+                                    if(match(sale_end_state,'AK','HI'),'Zone19',
+                                        if(sale_end_state='PR','Zone20',
+                                            if(sale_end_state='VI','Zone21',
+if(match(sale_end_state,'Guam'),'Zone22',
+    if(sale_start_country='CA','Canada')))))))))))))))))))))))) as sale_end_finance_zone
+
+resident finance_zone_temp;
+
+drop table finance_zone_temp;
+
+
+
+//Manual Input ---------------------------------------------------------------------------------------------
+[manual_input]:
+left keep (sale_basic)
+LOAD Distinct
+    CSO as sale_service_id,
+    //"Request Date & Time", // Created at eorder
+    "Sent to carrier" as align_manual_sent_to_carrier,
+    "Acknowledge Carrier" as align_manual_ack_carrier,
+    Comments as align_manual_comments
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/Align/Align Domestic PU Manual Data.xlsx]
+(ooxml, embedded labels, table is [Align info]);
+
+Extra_info_report:
+left keep(sale_basic)
+LOAD
+    //"Creation Date",
+    //"Align Reference",
+    "GEODIS Reference" as sale_service_id,
+    "CWT total (kg)" as external_chargeable_weight,
+    "Pallet QTY" as external_pallet_qty,
+    "Containers QTY" as external_container_qty
+FROM [lib://Geo_AMS/LogisticsAnalyst/Align/ALIGN Report Source.xlsx]
+(ooxml, embedded labels, table is Hoja1);
+
+
+Forecast:
+LOAD
+    Date_Forecast as Join_Date,   
+    "Forecast FTL",
+    "Forecast LTL",
+    "Forecast Air",
+    "Forecast Ocean",
+    "Forecast Air 2H21",
+    "Forecast Ocean 2H21"
+FROM [lib://Geo_AMS/LogisticsAnalyst/Align/Forecast.xlsx]
+(ooxml, embedded labels, table is Forecast);
+
+
+//missing RCs -------------------------------------------------------------------------------------
+missing_rc:
+noconcatenate
+load
+
+    sale_service_id
+
+resident sale_basic;
+
+
+left join(missing_rc)
+load distinct
+    sale_service_id,
+    pickup_reason_code_status
+
+resident pu_net_kpi;
+
+
+left join(missing_rc)
+load distinct
+    sale_service_id,
+    delivery_reason_code_status
+
+resident del_net_kpi;
+
+Store [missing_rc] into [lib://Geo_AMS/Automation\BI\Plugins/Reports/missing_rc.csv](txt);
+
+drop table missing_rc;
+
+//------------------------------------------------------------------------------
+conteiner_availability:
+left keep(sale_basic)
+LOAD
+    "Shipment ID" as hu_reference,
+    "Type of Load" as conteiner_av_type_of_load,
+    date("Pickup Request Date") as conteiner_av_pu_request_date,
+    date("Actual Arrival at Port Date") as conteiner_av_actual_arrival_at_port_date
+FROM [lib://Geo_AMS/CoE_GDL/Global OPS/Align/Container Availability at Pick-up.xlsx]
+(ooxml, embedded labels, table is APAC);
+
+ams_temp:
+left keep(sale_basic)
+LOAD
+    "Shipment ID" as hu_reference,
+    "Type of Load" as conteiner_av_type_of_load,
+    date("Pickup Request Date") as conteiner_av_pu_request_date,
+    date("Actual Arrival at Port Date") as conteiner_av_actual_arrival_at_port_date
+FROM [lib://Geo_AMS/CoE_GDL/Global OPS/Align/Container Availability at Pick-up.xlsx]
+(ooxml, embedded labels, table is AMS);
+
+concatenate(conteiner_availability)
+load
+    *
+resident ams_temp;
+
+drop table ams_temp;
+
+emea_temp:
+left keep(sale_basic)
+LOAD
+    "Shipment ID" as hu_reference,
+    "Type of Load" as conteiner_av_type_of_load,
+    date("Pickup Request Date") as conteiner_av_pu_request_date,
+    date("Actual Arrival at Port Date") as conteiner_av_actual_arrival_at_port_date
+FROM [lib://Geo_AMS/CoE_GDL/Global OPS/Align/Container Availability at Pick-up.xlsx]
+(ooxml, embedded labels, table is EMEA);
+
+concatenate(conteiner_availability)
+load
+    *
+resident emea_temp;
+
+drop table emea_temp;
+
+//exit script;

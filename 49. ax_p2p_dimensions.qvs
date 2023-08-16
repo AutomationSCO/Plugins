@@ -1,0 +1,45 @@
+p2p_AX_temp:
+noconcatenate
+load 
+    sale_service_id,
+    sale_contractor_party_Group_N1,
+    sale_executor_short_name
+
+resident sale_basic;
+
+left join(p2p_AX)
+load
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(p2p_AX)
+load
+
+    buy_service_id,
+    buy_service_nature
+
+resident buy_basic;
+
+p2p_AX:
+noconcatenate
+load 
+    buy_service_nature,
+    sale_contractor_party_Group_N1 & buy_service_nature & sale_executor_short_name as 
+
+
+left join(o2c_AX)
+LOAD
+
+    PCC as ax_pcc,
+    "Contract code" as ax_contract_code,
+    "Function Code" as ax_pcc_function,
+    Product as ax_product,
+    Offer as ax_offer,
+    Accounts as ax_account,
+    p2p_ax_key
+FROM [lib://Geo_AMS/Automation/BI/Finance/AX Dimensions/Dimensiones .xlsx]
+(ooxml, embedded labels, table is Hoja1)
+where Description = 'Sales';
+

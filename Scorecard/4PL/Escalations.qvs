@@ -1,0 +1,22 @@
+Escalations:
+left keep(sale_basic)
+LOAD
+    "Escalation ID" as escalation_id,
+    //Reference,
+    "Register Date" as escalation_date,
+    "Escalation Source" as escalation_source,
+    Escalated as escalation_escalated,
+    //"Escalated Position",
+    Team as escalation_team,
+    //"Escalation Level",
+    //"Escalated By",
+    //"Escalated By Position",
+    "Escalation Type" as escalation_type,
+    "RCCA Needed" as escalation_rcca_needed,
+    //"RCCA #",
+    //"Rcca Deadline Date",
+    Status as escalation_status,
+    cso_number as sale_service_id,
+    "Scalation Comments" as escalation_comments
+FROM [lib://Geo_AMS/LogisticsAnalyst/Escalation Dashboard/Escalation Data Base.xlsx]
+(ooxml, embedded labels, table is Sheet1);

@@ -1,0 +1,24 @@
+rimowa_scac_temp:
+load distinct 
+    sale_service_id
+
+resident sale_basic
+where Client = 'RIMOWA'; 
+
+
+left join(rimowa_scac_temp)
+load distinct
+    sale_service_id,
+    sale_scac
+
+resident sale_service_specific_data;
+
+rimowa_scac:
+noconcatenate
+Load distinct
+    sale_service_id,
+    'Incorrect' as cp_rimowa_scac
+resident rimowa_scac_temp
+where len(trim(sale_scac)) = 0;
+
+drop table rimowa_scac_temp;

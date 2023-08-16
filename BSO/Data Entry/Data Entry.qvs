@@ -1,0 +1,12 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/BSO/Data Entry/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/BSO/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/4. HU_Items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/19. eorder_shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/20. eorder_order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/21. eorder_HU.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/26. sale_finance_service_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/29. buy_additional_order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/43. eorder_shipment_accesorials.qvs]);

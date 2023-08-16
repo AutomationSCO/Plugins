@@ -1,0 +1,3654 @@
+$(Must_Include=[lib://Geo_AMS/LogisticsAnalyst/Plugins/1.0 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Perfect Order/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs])
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/2. ibm_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/3. newcu_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/5. align_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/6. kyndryl_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+//$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Finance Team.qvs]);
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/4. amount.qvs]);
+
+
+ibm_plant:
+noconcatenate
+load distinct
+    sale_service_id,
+    'Priority' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and not match(sale_executed_SLA,'SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','FTL','LTL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS'
+;
+//--------------------------------------------------------------------------------------------
+weight_edi_temp:
+load distinct
+    buy_service_id
+
+resident buy_basic
+where buy_be_71_flag = 0 and
+EDI_flag = 'EDI'
+and match(buy_service_execution_followup,'CD','CL')
+
+;
+
+left join(weight_edi_temp)
+load distinct
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(weight_edi_temp)
+load distinct
+    sale_service_id,
+    IsGNumber
+
+resident sale_basic;
+
+concatenate(ibm_plant)
+load distinct
+    sale_service_id,
+    'EDI Weight' as sale_control_point_plant,
+    'OPS' as data_owner_plant
+resident weight_edi_temp
+where IsGNumber = 'Plant' ;
+
+drop table weight_edi_temp;
+
+
+
+
+//--------------------------------------------------------------------------------------------
+concatenate(ibm_plant)
+load distinct
+    sale_service_id,
+    'Service Level' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and not match(sale_requested_SLA,'Standard','FTL','SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','HVP',
+'COMMON CARRIER LTL','SPECIALS','AD HOC7 COURIER PICK UP','TRUCKLOAD','HIGH VALUE PADDED VAN'
+,'COMMON CARRIER LTL','LTL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS'
+;
+//-----------------------------------------------------------------------------------------------
+
+concatenate(ibm_plant)
+load distinct
+    sale_service_id,
+    'Loading Name' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_start_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS'
+;
+
+//--------------------------------------------------------------------------------------------
+
+concatenate(ibm_plant)
+load distinct
+    sale_service_id,
+    'Loading Address' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_start_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS'
+;
+//---------------------------------------------------------------------------------------------------
+
+concatenate(ibm_plant)
+load distinct
+    sale_service_id,
+    'Starting Date' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_planned_start_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS'
+;
+//-----------------------------------------------------------------------------------------------------
+concatenate(ibm_plant)
+load distinct
+    sale_service_id,
+    'Ending Date' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_planned_end_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS'
+;
+
+
+//----------------------------------------------------------------------------------------------------
+
+concatenate(ibm_plant)
+load distinct
+    sale_service_id,
+    'Unloading Name' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_end_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS'
+;
+//---------------------------------------------------------------------------------------------------
+concatenate(ibm_plant)
+load distinct
+    sale_service_id,
+    'Unloading Address' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_end_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS'
+;
+
+//-----------------------------------------------------------------------------------------------------
+
+Missing_carried_weight_temp:
+left keep(sale_basic)
+load    
+    sale_service_id,
+    sale_weight_kg
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+;
+
+left join(Missing_carried_weight_temp)
+load
+    sale_service_id,
+    IBM_CSO_Carrier_Weight
+
+resident ibm_specific_info;
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Carried Weight' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+resident Missing_carried_weight_temp
+where len(trim(sale_weight_kg)) = 0;
+
+drop table Missing_carried_weight_temp;
+
+
+
+//---------------------------------------------------------
+
+expected_qty_temp:
+left keep(sale_basic)
+load
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+;
+
+
+expected_qty_temp:
+left join(expected_qty_temp)
+LOAD
+
+    sale_service_id,
+    sale_item_unpacked_forecast_quantity
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_item_unpacked.qvd]
+(qvd) 
+;
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Expected Qty.' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident expected_qty_temp
+where sale_item_unpacked_forecast_quantity = 0
+
+or len(trim(sale_item_unpacked_forecast_quantity)) = 0;
+
+drop table expected_qty_temp;
+
+
+//---------------------------------------------------------
+scac_temp:
+left keep(ibm_specific_info)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_Standard_Carrier_Alpha_Code)) = 0
+and IsGNumber = 'Plant' 
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and match(sale_service_execution_followup,'CD','CL')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Scac Code' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident scac_temp;
+
+drop table scac_temp;
+
+//---------------------------------------------------------
+
+miles_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' //and sale_service_execution_followup = 'CL'
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and match(IBM_Standard_Carrier_Alpha_Code,'GF09','GF37','GF50','GFPV','GF02','GF08','GF26','GF02','GF04','GF29','GF28','GF72')
+and sale_start_geo = 'AMS'
+;
+
+left join(miles_temp)
+load 
+    sale_service_id,
+    IBM_Miles
+
+resident ibm_specific_info;
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Miles' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident miles_temp
+where len(trim(IBM_Miles)) = 0 
+or IBM_Miles = 0
+;
+
+drop table miles_temp;
+
+
+//------------------------------------------------
+
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Customer HAWB' as sale_control_point_plant,
+    'OPS' as data_owner_plant
+
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_CUSTOMER_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+//and match(sale_service_start_name,'GEODIS FREIGHT FORWARDING','GEODIS DFW HUB','DFW WAREHOUSE','DFW','GEODIS EMPIRE','EMPIRE','GEODIS (EMPIRE)')
+and match(sale_service_start_name,'GEODIS FREIGHT FORWARDING','GEODIS EMPIRE','EMPIRE','GEODIS (EMPIRE)')
+;
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Customer HAWB' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_CUSTOMER_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and not match(sale_service_start_name,'GEODIS FREIGHT FORWARDING','GEODIS EMPIRE','EMPIRE','GEODIS (EMPIRE)')
+and sale_start_geo = 'AMS'
+;
+
+
+//---------------------------------------------------------------
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_plant,
+    'OPS' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and match(sale_service_start_name,'GEODIS FREIGHT FORWARDING','GEODIS EMPIRE','EMPIRE','GEODIS (EMPIRE)')
+
+;
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and not match(sale_service_start_name,'GEODIS FREIGHT FORWARDING','GEODIS EMPIRE','EMPIRE','GEODIS (EMPIRE)')
+and sale_start_geo = 'AMS'
+;
+
+//--------------------------------------------------------------------
+
+Order_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS';
+
+left join(Order_temp)
+load 
+    sale_service_id,
+    sale_order_type
+
+resident sale_service_specific_data;
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Order Type' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident Order_temp
+where len(trim(sale_order_type)) = 0
+or  not match(sale_order_type,'SOS','VENDOR','OTHER','PLATFORM','REVERSE')
+;
+
+drop table Order_temp;
+
+//----------------------------------------------------------------------------------
+service_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS';
+
+left join(service_temp)
+load 
+    sale_service_id,
+    sale_specific_info_service_type
+
+resident sale_service_specific_data;
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Service Type' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident service_temp
+where len(trim(sale_specific_info_service_type)) = 0 ;
+
+drop table service_temp;
+
+//----------------------------------------------------------------------------------
+requested_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS';
+
+left join(requested_temp)
+load 
+    sale_service_id,
+    IBM_REQUESTED_SERVICE
+
+resident ibm_specific_info;
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Requested Service' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident requested_temp
+where len(trim(IBM_REQUESTED_SERVICE)) = 0 or upper(IBM_REQUESTED_SERVICE) = 'NO MATCH' or IBM_REQUESTED_SERVICE = 0;
+
+drop table requested_temp;
+
+
+//---------------------------------------------------------------------------
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Loading Town' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_start_city)) = 0 
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS';
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Unloading Town' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_end_city)) = 0
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_start_geo = 'AMS';
+//--------------------------------------------------------------------------------
+
+
+// account_temp:
+// left keep(sale_basic)
+// LOAD
+
+//     sale_service_id
+
+// resident sale_basic
+// where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+// and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+// and IsGNumber = 'Plant' 
+// and sale_start_geo = 'AMS';
+
+// left join(account_temp)
+// load 
+//     sale_service_id,
+//     IBM_BUYER_ACCOUNT_CODE
+
+// resident ibm_specific_info;
+
+// concatenate(ibm_plant)
+// load 
+//     sale_service_id,
+//     'Account Code' as sale_control_point_plant,
+//     'BSO' as data_owner_plant
+
+// resident account_temp
+// where len(trim(IBM_BUYER_ACCOUNT_CODE)) = 0 ;
+
+// drop table account_temp;
+
+//--------------------------------------------------------------------------------------
+
+// adhoc_temp:
+// left keep(sale_basic)
+// LOAD
+
+//     sale_service_id
+
+// resident sale_basic
+// where  match(sale_service_execution_followup,'CD','CL')
+// and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+// and IsGNumber = 'Plant' ;
+
+// left join(adhoc_temp)
+// load 
+//     sale_service_id,
+//     IBM_customer_adhoc_reference
+
+// resident ibm_specific_info;
+
+// concatenate(ibm_plant)
+// load 
+//     sale_service_id,
+//     'Adhoc Reference' as sale_control_point_plant,
+//     'OPS' as data_owner_plant
+
+// resident adhoc_temp
+// where len(trim(IBM_customer_adhoc_reference)) = 0 ;
+
+// drop table adhoc_temp;
+
+
+//-----------------------------------------------------------------------------
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Tracking Number' as sale_control_point_plant,
+    'OPS' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_TRACKING_NUMBER)) = 0
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and match(sale_service_execution_followup,'CD','CL')
+and match(sale_service_start_name,'GEODIS FREIGHT FORWARDING','GEODIS EMPIRE','EMPIRE','GEODIS (EMPIRE)')
+
+;
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'Tracking Number' as sale_control_point_plant,
+    'BSO' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_TRACKING_NUMBER)) = 0
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and match(sale_service_execution_followup,'CD','CL')
+and not match(sale_service_start_name,'GEODIS FREIGHT FORWARDING','GEODIS EMPIRE','EMPIRE','GEODIS (EMPIRE)')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(ibm_plant)
+load 
+    sale_service_id,
+    'DEL BE' as sale_control_point_plant,
+    'OPS' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_be_d_flag)) = 0
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber = 'Plant' 
+and sale_service_execution_followup = 'CL';
+
+
+
+//--------------------------------------------------------------------------------Broker
+
+
+ibm_broker:
+noconcatenate
+load distinct
+    sale_service_id,
+    'Loading Name' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+resident sale_basic
+where len(trim(sale_service_start_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and sale_from_code = 'BROKER'
+and sale_start_geo = 'AMS'
+ ;
+
+//--------------------------------------------------------------------------------------------
+
+concatenate(ibm_broker)
+load distinct
+    sale_service_id,
+    'Loading Address' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+resident sale_basic
+where len(trim(sale_service_start_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and sale_from_code = 'BROKER';
+//---------------------------------------------------------------------------------------------------
+
+
+
+
+concatenate(ibm_broker)
+load distinct
+    sale_service_id,
+    'Unloading Name' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+resident sale_basic
+where len(trim(sale_service_end_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and sale_from_code = 'BROKER' 
+and sale_start_geo = 'AMS';
+//---------------------------------------------------------------------------------------------------
+concatenate(ibm_broker)
+load distinct
+    sale_service_id,
+    'Unloading Address' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+resident sale_basic
+where len(trim(sale_service_end_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and sale_from_code = 'BROKER' 
+and sale_start_geo = 'AMS'
+;
+
+//-----------------------------------------------------------------------------------------------------
+
+concatenate(ibm_broker)
+load distinct
+    sale_service_id,
+    'Starting Date' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+resident sale_basic
+where len(trim(sale_planned_start_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and sale_from_code = 'BROKER'
+and sale_start_geo = 'AMS'
+;
+//-----------------------------------------------------------------------------------------------------
+concatenate(ibm_broker)
+load distinct
+    sale_service_id,
+    'Ending Date' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+resident sale_basic
+where len(trim(sale_planned_end_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and sale_from_code = 'BROKER'
+and sale_start_geo = 'AMS'
+;
+
+
+//---------------------------------------------------------
+scac_temp:
+noconcatenate
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where len(trim(IBM_Standard_Carrier_Alpha_Code)) = 0
+and sale_from_code = 'BROKER'
+and match(sale_service_execution_followup,'CD','CL')
+and sale_start_geo = 'AMS';
+
+concatenate(ibm_broker)
+load 
+    sale_service_id,
+    'Scac Code' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+resident scac_temp;
+
+drop table scac_temp;
+
+//---------------------------------------------------------
+// bursting_temp:
+// noconcatenate
+// LOAD
+
+//     sale_service_id,
+//     sale_invoice_bursting
+
+// resident sale_basic
+// where sale_from_code = 'BROKER'
+// and match(sale_service_execution_followup,'CD','CL')
+// and sale_start_geo = 'AMS';
+
+
+
+// concatenate(ibm_broker)
+// load 
+//     sale_service_id,
+//     'Bursting Code' as sale_control_point_broker,
+//     'BSO' as data_owner_broker
+
+// resident bursting_temp
+// where match(sale_invoice_bursting,'BNO','BYES');
+
+// drop table bursting_temp;
+
+//------------------------------------------------
+
+
+concatenate(ibm_broker)
+load 
+    sale_service_id,
+    'Customer HAWB' as sale_control_point_broker,
+    'OPS' as data_owner_broker
+
+
+resident sale_basic
+where len(trim(IBM_CUSTOMER_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and sale_from_code = 'BROKER';
+
+
+//---------------------------------------------------------------
+concatenate(ibm_broker)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_broker,
+    'OPS' as data_owner_broker
+
+resident sale_basic
+where len(trim(IBM_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and sale_from_code = 'BROKER'
+and match(sale_service_start_name,'GEODIS FREIGHT FORWARDING','GEODIS EMPIRE','EMPIRE','GEODIS (EMPIRE)')
+;
+
+concatenate(ibm_broker)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_broker,
+    'OPS' as data_owner_broker
+
+resident sale_basic
+where len(trim(IBM_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and sale_from_code = 'BROKER'
+and not match(sale_service_start_name,'GEODIS FREIGHT FORWARDING','GEODIS EMPIRE','EMPIRE','GEODIS (EMPIRE)')
+;
+
+//--------------------------------------------------------------------
+
+Order_temp:
+noconcatenate
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where  match(sale_service_execution_followup,'APP','CD','CL')
+and sale_from_code = 'BROKER'
+and sale_start_geo = 'AMS';
+
+left join(Order_temp)
+load 
+    sale_service_id,
+    sale_order_type
+
+resident sale_service_specific_data;
+
+concatenate(ibm_broker)
+load 
+    sale_service_id,
+    'Order Type' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+resident Order_temp
+where len(trim(sale_order_type)) = 0 
+or  not match(sale_order_type,'SOS','VENDOR','OTHER','PLATFORM','REVERSE')
+;
+
+drop table Order_temp;
+
+//----------------------------------------------------------------------------------
+service_temp:
+noconcatenate
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where  match(sale_service_execution_followup,'APP','CD','CL')
+and sale_from_code = 'BROKER'
+and sale_start_geo = 'AMS';
+
+left join(service_temp)
+load 
+    sale_service_id,
+    sale_specific_info_service_type
+
+resident sale_service_specific_data;
+
+concatenate(ibm_broker)
+load 
+    sale_service_id,
+    'Service Type' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+
+resident service_temp
+where len(trim(sale_specific_info_service_type)) = 0 ;
+
+drop table service_temp;
+
+//----------------------------------------------------------------------------------
+requested_temp:
+noconcatenate
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where  match(sale_service_execution_followup,'APP','CD','CL')
+and sale_from_code = 'BROKER'
+and sale_start_geo = 'AMS';
+
+
+left join(requested_temp)
+load 
+    sale_service_id,
+    IBM_REQUESTED_SERVICE
+
+resident ibm_specific_info;
+
+concatenate(ibm_broker)
+load 
+    sale_service_id,
+    'Requested Service' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+resident requested_temp
+where len(trim(IBM_REQUESTED_SERVICE)) = 0 or upper(IBM_REQUESTED_SERVICE) = 'NO MATCH' or IBM_REQUESTED_SERVICE = 0;
+
+drop table requested_temp;
+
+
+//---------------------------------------------------------------------------
+concatenate(ibm_broker)
+load 
+    sale_service_id,
+    'Loading Town' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+resident sale_basic
+where len(trim(sale_start_city)) = 0 
+and sale_from_code = 'BROKER'
+and sale_start_geo = 'AMS';
+
+concatenate(ibm_broker)
+load 
+    sale_service_id,
+    'Unloading Town' as sale_control_point_broker,
+    'BSO' as data_owner_broker
+
+resident sale_basic
+where len(trim(sale_end_city)) = 0
+and sale_from_code = 'BROKER';
+
+//--------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------------------------------------ Interpipes
+
+
+
+IBM_Interpipes:
+noconcatenate
+load distinct
+    sale_service_id,
+    'Priority' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident sale_basic
+where  match(sale_service_execution_followup,'APP','CD','CL')
+and not match(sale_executed_SLA,'SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','FTL','LTL')
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'Tracking Number' as sale_control_point_plant,
+    'OPS' as data_owner_plant
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_TRACKING_NUMBER)) = 0
+and GEODIS_ops_Team = 'Inter Team' 
+and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+and sale_end_geo = 'AMS'
+;
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Priority' as sale_control_point_interpipes,
+    'EMEA/APAC COE' as data_owner_interpipes
+
+resident sale_basic
+where  match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and not match(sale_executed_SLA,'SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','FTL','LTL')
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo <> 'AMS'
+;
+
+
+//--------------------------------------------------------------------------------------------
+weight_edi_temp:
+load distinct
+    buy_service_id
+
+resident buy_basic
+where buy_be_71_flag = 0 and
+EDI_flag = 'EDI'
+and match(buy_service_execution_followup,'CD','CL')
+;
+
+left join(weight_edi_temp)
+load distinct
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(weight_edi_temp)
+load distinct
+    sale_service_id,
+    GEODIS_ops_Team,
+    sale_contractor_party_Group_N1
+
+resident sale_basic;
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'EDI Weight' as sale_control_point_interpipes,
+    'OPS' as data_owner_interpipes
+resident weight_edi_temp
+where GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD');
+
+drop table weight_edi_temp;
+
+//--------------------------------------------------------------------------------------------
+be_71_temp:
+load distinct
+    buy_service_id,
+    buy_be_71_flag
+
+resident buy_basic
+where len(trim(buy_be_71_flag)) = 0 
+and match(buy_service_execution_followup,'CD','CL')
+;
+
+left join(be_71_temp)
+load distinct
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(be_71_temp)
+load distinct
+    sale_service_id,
+    GEODIS_ops_Team,
+    sale_contractor_party_Group_N1,
+    sale_geo_to_geo,
+    sale_start_geo,
+    sale_executor_short_name,
+    sale_ams_billing
+
+resident sale_basic;
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    '71 BE' as sale_control_point_interpipes,
+    'OPS' as data_owner_interpipes
+resident be_71_temp
+where GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','SOFTLYR_MD')
+and len(trim(buy_be_71_flag)) = 0 
+and sale_geo_to_geo <> 'AMS-AMS'
+and sale_start_geo = 'AMS'
+and sale_ams_billing = 'AMS Bill'
+;
+
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    '71 BE' as sale_control_point_interpipes,
+    'EMEA/APAC COE' as data_owner_interpipes
+resident be_71_temp
+where GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','SOFTLYR_MD')
+and len(trim(buy_be_71_flag)) = 0 
+//and sale_geo_to_geo <> 'AMS-AMS'
+and sale_start_geo <> 'AMS';
+
+drop table be_71_temp;
+
+//--------------------------------------------------------------------------------------------
+// concatenate(IBM_Interpipes)
+// load distinct
+//     sale_service_id,
+//     'Service Level' as sale_control_point_interpipes
+
+// resident sale_basic
+// where  match(sale_service_execution_followup,'APP','CD','CL')
+// and not match(sale_requested_SLA,'SL1','SL2','SL3','SLX','HC')
+// and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+// ;
+//-----------------------------------------------------------------------------------------------
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Loading Name' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_service_start_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Loading Name' as sale_control_point_interpipes,
+    'EMEA/APAC COE' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_service_start_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo <> 'AMS'
+;
+//----------------------------------------------------------------------------------
+// concatenate(IBM_Interpipes)
+// load distinct
+//     sale_service_id,
+//     '71 BE' as sale_control_point_interpipes,
+//     'OPS' as data_owner_interpipes
+
+// resident sale_basic
+// where len(trim(sale_be_71_flag)) = 0
+// and match(sale_service_execution_followup,'CD','CL')
+// and sale_geo_to_geo <> 'AMS-AMS'
+// and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+// ;
+
+
+//---------------------------------------------------------------------------------------
+// concatenate(IBM_Interpipes)
+// load distinct
+//     sale_service_id,
+//     'STC' as sale_control_point_interpipes,
+//     'BSO' as data_owner_interpipes
+
+// resident sale_basic
+// where len(trim(sale_to_code)) = 0
+// and match(sale_service_execution_followup,'APP','CD','CL')
+// and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+// and sale_start_geo = 'AMS'
+// ;
+
+// concatenate(IBM_Interpipes)
+// load distinct
+//     sale_service_id,
+//     'STC' as sale_control_point_interpipes,
+//     'EMEA/APAC COE' as data_owner_interpipes
+
+// resident sale_basic
+// where len(trim(sale_to_code)) = 0
+// and match(sale_service_execution_followup,'APP','CD','CL')
+// and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+// and sale_start_geo <> 'AMS'
+// ;
+
+
+//---------------------------------------------------------------------------------------
+// concatenate(IBM_Interpipes)
+// load distinct
+//     sale_service_id,
+//     'SFC' as sale_control_point_interpipes,
+//     'BSO' as data_owner_interpipes
+
+// resident sale_basic
+// where len(trim(sale_from_code)) = 0
+// and match(sale_service_execution_followup,'APP','CD','CL')
+// and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+// and sale_start_geo = 'AMS'
+// ;
+
+// concatenate(IBM_Interpipes)
+// load distinct
+//     sale_service_id,
+//     'SFC' as sale_control_point_interpipes,
+//     'EMEA/APAC COE' as data_owner_interpipes
+
+// resident sale_basic
+// where len(trim(sale_from_code)) = 0
+// and match(sale_service_execution_followup,'APP','CD','CL')
+// and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+// and sale_start_geo <> 'AMS'
+// ;
+
+
+//--------------------------------------------------------------------------------------------
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Loading Address' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_service_start_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Loading Address' as sale_control_point_interpipes,
+    'EMEA/APAC COE' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_service_start_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo <> 'AMS'
+;
+
+//---------------------------------------------------------------------------------------------------
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Starting Date' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_planned_start_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Starting Date' as sale_control_point_interpipes,
+    'EMEA/APAC COE' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_planned_start_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo <> 'AMS'
+;
+
+//-----------------------------------------------------------------------------------------------------
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Ending Date' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_planned_end_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Ending Date' as sale_control_point_interpipes,
+    'EMEA/APAC COE' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_planned_end_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo <> 'AMS'
+;
+//----------------------------------------------------------------------------------------------------
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Unloading Name' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_service_end_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Unloading Name' as sale_control_point_interpipes,
+    'EMEA/APAC COE' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_service_end_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo <> 'AMS'
+;
+//---------------------------------------------------------------------------------------------------
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Unloading Address' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_service_end_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(IBM_Interpipes)
+load distinct
+    sale_service_id,
+    'Unloading Address' as sale_control_point_interpipes,
+    'EMEA/APAC COE' as data_owner_interpipes
+
+resident sale_basic
+where len(trim(sale_service_end_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+//and sale_geo_to_geo <> 'AMS-AMS'
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo <> 'AMS'
+;
+
+
+//-----------------------------------------------------------------------------------------------------
+
+Missing_carried_weight_temp:
+left keep(sale_basic)
+load    
+    sale_service_id,
+    sale_weight_kg
+resident sale_basic
+where  match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD');
+
+
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'Carried Weight' as sale_control_point_interpipes,
+    'OPS' as data_owner_interpipes
+
+resident Missing_carried_weight_temp
+where len(trim(sale_weight_kg)) = 0;
+
+drop table Missing_carried_weight_temp;
+
+//-----------------------------------------------------------------------------------------------------
+
+Missing_Freight_Method_temp:
+left keep(sale_basic)
+load    
+    sale_service_id
+resident sale_basic
+where  match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS';
+
+left join(Missing_Freight_Method_temp)
+load
+    sale_service_id,
+    IBM_freight_method
+
+resident ibm_specific_info;
+
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'Freight Method' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident Missing_Freight_Method_temp
+where len(trim(IBM_freight_method)) = 0;
+
+drop table Missing_Freight_Method_temp;
+
+
+
+
+
+//---------------------------------------------------------
+scac_temp:
+left keep(ibm_specific_info)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where len(trim(IBM_Standard_Carrier_Alpha_Code)) = 0
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and match(sale_service_execution_followup,'CD','CL')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'Scac Code' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident scac_temp;
+
+drop table scac_temp;
+
+
+
+//---------------------------------------------------------------
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_interpipes,
+    'OPS' as data_owner_interpipes
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_interpipes,
+    'EMEA/APAC COE' as data_owner_interpipes
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo <> 'AMS';
+
+
+//--------------------------------------------------------------------
+
+Order_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+left join(Order_temp)
+load 
+    sale_service_id,
+    sale_order_type
+
+resident sale_service_specific_data;
+
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'Order Type' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident Order_temp
+where len(trim(sale_order_type)) = 0 
+or  not match(sale_order_type,'SOS','VENDOR','OTHER','PLATFORM','REVERSE')
+;
+
+drop table Order_temp;
+
+//----------------------------------------------------------------------------------
+service_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+left join(service_temp)
+load 
+    sale_service_id,
+    sale_specific_info_service_type
+
+resident sale_service_specific_data;
+
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'Service Type' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident service_temp
+where len(trim(sale_specific_info_service_type)) = 0 ;
+
+drop table service_temp;
+
+//----------------------------------------------------------------------------------
+requested_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+left join(requested_temp)
+load 
+    sale_service_id,
+    IBM_REQUESTED_SERVICE
+
+resident ibm_specific_info;
+
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'Requested Service' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident requested_temp
+where len(trim(IBM_REQUESTED_SERVICE)) = 0 or upper(IBM_REQUESTED_SERVICE) = 'NO MATCH' or IBM_REQUESTED_SERVICE = 0;
+
+drop table requested_temp;
+
+
+//---------------------------------------------------------------------------
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'Loading Town' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_start_city)) = 0 
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+
+
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'Unloading Town' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_end_city)) = 0
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_start_geo = 'AMS'
+;
+//--------------------------------------------------------------------------------
+
+
+//--------------------------------------------------------------------------------------
+
+adhoc_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT')
+and sale_ams_billing = 'AMS Bill'
+and sale_geo_to_geo <> 'AMS-AMS'
+;
+
+left join(adhoc_temp)
+load 
+    sale_service_id,
+    IBM_customer_adhoc_reference
+
+resident ibm_specific_info;
+
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'Adhoc Reference' as sale_control_point_interpipes,
+    'BSO' as data_owner_interpipes
+
+resident adhoc_temp
+where len(trim(IBM_customer_adhoc_reference)) = 0 ;
+
+drop table adhoc_temp;
+
+
+//-----------------------------------------------------------------------------
+
+
+concatenate(IBM_Interpipes)
+load 
+    sale_service_id,
+    'DEL BE' as sale_control_point_interpipes,
+    'OPS' as data_owner_interpipes
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_be_d_flag)) = 0
+and GEODIS_ops_Team = 'Inter Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and sale_service_execution_followup = 'CL'
+and sale_end_geo = 'AMS';
+
+
+
+
+//-------------------------------------------------------------------------------------------------White glove
+
+
+//-------------------------------------------------------------------------------------------
+new_co:
+load distinct
+    sale_service_id,
+    'Priority' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and not match(sale_executed_SLA,'SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','FTL','LTL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+
+//--------------------------------------------------------------------------------------------
+Missing_carried_weight_temp:
+left keep(sale_basic)
+load    
+    sale_service_id,
+    sale_weight_kg
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+
+left join(Missing_carried_weight_temp)
+load
+    sale_service_id,
+    NEWCUS_Carrier_Weight
+
+resident newcu_specific_info;
+
+concatenate(new_co)
+load 
+    sale_service_id,
+    'Carried Weight' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+resident Missing_carried_weight_temp
+where len(trim(sale_weight_kg)) = 0;
+
+drop table Missing_carried_weight_temp;
+//--------------------------------------------------------------------------------------------
+Missing_Tracking_temp:
+left keep(sale_basic)
+load    
+    sale_service_id
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+
+left join(Missing_Tracking_temp)
+load
+    sale_service_id,
+    NEWCUS_Tracking_Number
+
+resident newcu_specific_info;
+
+concatenate(new_co)
+load 
+    sale_service_id,
+    'Tracking Number' as sale_control_point_white_glove,
+    'OPS' as data_owner_white_glove
+resident Missing_Tracking_temp
+where len(trim(NEWCUS_Tracking_Number)) = 0;
+
+drop table Missing_Tracking_temp;
+
+//--------------------------------------------------------------------------------------------
+Missing_hawb_temp:
+left keep(sale_basic)
+load    
+    sale_service_id
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+
+left join(Missing_hawb_temp)
+load
+    sale_service_id,
+    NEWCUS_House_Air_Way_Bill
+
+resident newcu_specific_info;
+
+concatenate(new_co)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_white_glove,
+    'OPS' as data_owner_white_glove
+
+resident Missing_hawb_temp
+where len(trim(NEWCUS_House_Air_Way_Bill)) = 0;
+
+drop table Missing_hawb_temp;
+//----------------------------------------------------------------------------------------------
+concatenate(new_co)
+load distinct
+    sale_service_id,
+    'Service Level' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and not match(sale_requested_SLA,'Standard','FTL','SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','HVP',
+'COMMON CARRIER LTL','SPECIALS','AD HOC7 COURIER PICK UP','TRUCKLOAD','HIGH VALUE PADDED VAN'
+,'COMMON CARRIER LTL','LTL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+//-----------------------------------------------------------------------------------------------
+
+concatenate(new_co)
+load distinct
+    sale_service_id,
+    'Loading Name' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_start_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+
+//--------------------------------------------------------------------------------------------
+
+concatenate(new_co)
+load distinct
+    sale_service_id,
+    'Loading Address' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_start_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+//---------------------------------------------------------------------------------------------------
+
+concatenate(new_co)
+load distinct
+    sale_service_id,
+    'Starting Date' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_planned_start_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+//-----------------------------------------------------------------------------------------------------
+concatenate(new_co)
+load distinct
+    sale_service_id,
+    'Ending Date' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_planned_end_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+
+
+//----------------------------------------------------------------------------------------------------
+
+concatenate(new_co)
+load distinct
+    sale_service_id,
+    'Unloading Name' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_end_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+//---------------------------------------------------------------------------------------------------
+concatenate(new_co)
+load distinct
+    sale_service_id,
+    'Unloading Address' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_end_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+
+
+
+//---------------------------------------------------------
+scac_temp:
+left keep(ibm_specific_info)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_Standard_Carrier_Alpha_Code)) = 0
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+and match(sale_service_execution_followup,'CD','CL')
+
+or 
+
+sale_from_code <> 'BROKER' and not IBM_Standard_Carrier_Alpha_Code = 'WG00'
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+and match(sale_service_execution_followup,'CD','CL')
+
+;
+
+concatenate(new_co)
+load 
+    sale_service_id,
+    'Scac Code' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+resident scac_temp;
+
+drop table scac_temp;
+
+
+
+
+//---------------------------------------------------------------------------
+concatenate(new_co)
+load 
+    sale_service_id,
+    'Loading Town' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_start_city)) = 0 
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+
+concatenate(new_co)
+load 
+    sale_service_id,
+    'Unloading Town' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_end_city)) = 0
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+;
+//--------------------------------------------------------------------------------
+
+
+
+
+concatenate(new_co)
+load 
+    sale_service_id,
+    'DEL BE' as sale_control_point_white_glove,
+    'OPS' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_be_d_flag)) = 0
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+and sale_service_execution_followup = 'CL'
+;
+
+//---------------------------------------------------------
+
+expected_qty_temp:
+left keep(sale_basic)
+load
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+and sale_start_geo = 'AMS'
+;
+
+
+expected_qty_temp:
+left join(expected_qty_temp)
+LOAD
+
+    sale_service_id,
+    sale_item_unpacked_forecast_quantity
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_item_unpacked.qvd]
+(qvd)
+;
+
+concatenate(new_co)
+load 
+    sale_service_id,
+    'Expected Qty.' as sale_control_point_white_glove,
+    'BSO' as data_owner_white_glove
+
+
+resident expected_qty_temp
+where sale_item_unpacked_forecast_quantity = 0
+
+or len(trim(sale_item_unpacked_forecast_quantity)) = 0;
+
+drop table expected_qty_temp;
+
+concatenate(new_co)
+load 
+    sale_service_id,
+    'Loading Number' as sale_control_point_white_glove,
+    'OPS' as data_owner_white_glove
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_loading_number)) = 0
+and match(sale_contractor_party_Group_N1,'NEWCUS')
+and wildmatch(sale_service_short_name,'APEX*','JBI*');
+
+//---------------------------------------------------------------------------------------- Kyndryl
+
+
+Kyndryl:
+noconcatenate
+load distinct
+    sale_service_id,
+    'Priority' as sale_control_point_kyndryl,
+    'BSO' as data_owner_kyndryl
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and not match(sale_executed_SLA,'SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','FTL','LTL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+
+//--------------------------------------------------------------------------------------------
+weight_edi_temp:
+load distinct
+    buy_service_id
+
+resident buy_basic
+where buy_be_71_flag = 0 and
+EDI_flag = 'EDI'
+and match(buy_service_execution_followup,'CD','CL')
+
+;
+
+left join(weight_edi_temp)
+load distinct
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(weight_edi_temp)
+load distinct
+    sale_service_id,
+    sale_contractor_party_Group_N1
+
+resident sale_basic;
+
+
+concatenate(Kyndryl)
+load distinct
+    sale_service_id,
+    'EDI Weight' as sale_control_point_kyndryl,
+    'OPS' as data_owner_kyndryl
+resident weight_edi_temp
+where match(sale_contractor_party_Group_N1,'KYNDRYL');
+
+drop table weight_edi_temp;
+
+//--------------------------------------------------------------------------------------------
+concatenate(Kyndryl)
+load distinct
+    sale_service_id,
+    'Service Level' as sale_control_point_kyndryl,
+    'BSO' as data_owner_kyndryl
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and not match(sale_requested_SLA,'Standard','FTL','SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','HVP',
+'COMMON CARRIER LTL','SPECIALS','AD HOC7 COURIER PICK UP','TRUCKLOAD','HIGH VALUE PADDED VAN'
+,'COMMON CARRIER LTL','LTL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+//-----------------------------------------------------------------------------------------------
+
+concatenate(Kyndryl)
+load distinct
+    sale_service_id,
+    'Loading Name' as sale_control_point_kyndryl,
+    'BSO' as data_owner_kyndryl
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_start_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+
+//--------------------------------------------------------------------------------------------
+
+concatenate(Kyndryl)
+load distinct
+    sale_service_id,
+    'Loading Address' as sale_control_point_kyndryl,
+    'BSO' as data_owner_kyndryl
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_start_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+//---------------------------------------------------------------------------------------------------
+
+concatenate(Kyndryl)
+load distinct
+    sale_service_id,
+    'Starting Date' as sale_control_point_kyndryl,
+    'BSO' as data_owner_kyndryl
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_planned_start_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+//-----------------------------------------------------------------------------------------------------
+concatenate(Kyndryl)
+load distinct
+    sale_service_id,
+    'Ending Date' as sale_control_point_kyndryl,
+    'BSO' as data_owner_kyndryl
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_planned_end_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+
+
+//----------------------------------------------------------------------------------------------------
+
+concatenate(Kyndryl)
+load distinct
+    sale_service_id,
+    'Unloading Name' as sale_control_point_kyndryl,
+    'BSO' as data_owner_kyndryl
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_end_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+//---------------------------------------------------------------------------------------------------
+concatenate(Kyndryl)
+load distinct
+    sale_service_id,
+    'Unloading Address' as sale_control_point_kyndryl,
+    'BSO' as data_owner_kyndryl
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_end_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+
+//-----------------------------------------------------------------------------------------------------
+
+Missing_carried_weight_temp:
+left keep(sale_basic)
+load    
+    sale_service_id,
+    sale_weight_kg
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+;
+
+concatenate(Kyndryl)
+load 
+    sale_service_id,
+    'Carried Weight' as sale_control_point_kyndryl,
+    'OPS' as data_owner_kyndryl
+
+resident Missing_carried_weight_temp
+where len(trim(sale_weight_kg)) = 0;
+
+drop table Missing_carried_weight_temp;
+
+
+
+//---------------------------------------------------------
+
+expected_qty_temp:
+left keep(sale_basic)
+load
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+;
+
+
+expected_qty_temp:
+left join(expected_qty_temp)
+LOAD
+
+    sale_service_id,
+    sale_item_unpacked_forecast_quantity
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_item_unpacked.qvd]
+(qvd) 
+;
+
+concatenate(Kyndryl)
+load 
+    sale_service_id,
+    'Expected Qty.' as sale_control_point_kyndryl,
+    'OPS' as data_owner_kyndryl
+
+resident expected_qty_temp
+where sale_item_unpacked_forecast_quantity = 0
+
+or len(trim(sale_item_unpacked_forecast_quantity)) = 0;
+
+drop table expected_qty_temp;
+
+
+//---------------------------------------------------------
+scac_temp:
+left keep(ibm_specific_info)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_Standard_Carrier_Alpha_Code)) = 0
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and match(sale_service_execution_followup,'CD','CL')
+;
+
+concatenate(Kyndryl)
+load 
+    sale_service_id,
+    'Scac Code' as sale_control_point_kyndryl,
+    'OPS' as data_owner_kyndryl
+
+resident scac_temp;
+
+drop table scac_temp;
+
+//---------------------------------------------------------
+
+miles_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and sale_service_execution_followup = 'CL'
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and match(IBM_Standard_Carrier_Alpha_Code,'GF09','GF37','GF50','GFPV','GF02','GF08','GF26','GF02','GF04','GF29','GF28','GF72')
+and sale_start_geo = 'AMS'
+;
+
+left join(miles_temp)
+load 
+    sale_service_id,
+    IBM_Miles
+
+resident ibm_specific_info;
+
+concatenate(Kyndryl)
+load 
+    sale_service_id,
+    'Miles' as sale_control_point_kyndryl,
+    'BSO' as data_owner_kyndryl
+
+resident miles_temp
+where len(trim(IBM_Miles)) = 0 ;
+
+drop table miles_temp;
+
+
+
+//---------------------------------------------------------------
+
+
+sale_hawb_temp:
+load 
+    sale_service_id
+
+
+resident sale_basic
+where sale_from_code <> 'BROKER' 
+and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+
+left join(sale_hawb_temp)
+load 
+    sale_service_id,
+    sale_hawb
+
+resident sale_service_specific_data;
+
+concatenate(Kyndryl)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_kyndryl,
+    'OPS' as data_owner_kyndryl
+
+resident sale_hawb_temp
+where len(trim(sale_hawb)) = 0 ;
+
+drop table sale_hawb_temp;
+
+
+sale_hawb_temp:
+load 
+    sale_service_id
+
+
+resident sale_basic
+where sale_from_code <> 'BROKER'
+and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo <> 'AMS'
+;
+
+left join(sale_hawb_temp)
+load 
+    sale_service_id,
+    sale_hawb
+
+resident sale_service_specific_data;
+
+concatenate(Kyndryl)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_kyndryl,
+    'EMEA/APAC COE' as data_owner_kyndryl
+
+resident sale_hawb_temp
+where len(trim(sale_hawb)) = 0 ;
+
+drop table sale_hawb_temp;
+
+//--------------------------------------------------------------------
+
+// Order_temp:
+// left keep(sale_basic)
+// LOAD
+
+//     sale_service_id
+
+// resident sale_basic
+// where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+// and match(sale_contractor_party_Group_N1,'KYNDRYL')
+// and sale_start_geo = 'AMS'
+// ;
+
+// left join(Order_temp)
+// load 
+//     sale_service_id,
+//     sale_order_type
+
+// resident sale_service_specific_data;
+
+// concatenate(Kyndryl)
+// load 
+//     sale_service_id,
+//     'Order Type' as sale_control_point_kyndryl,
+//     'BSO' as data_owner_kyndryl
+
+// resident Order_temp
+// where len(trim(sale_order_type)) = 0 
+// or  not match(sale_order_type,'SOS','VENDOR','OTHER','PLATFORM','REVERSE')
+// ;
+
+// drop table Order_temp;
+
+//----------------------------------------------------------------------------------
+// service_temp:
+// left keep(sale_basic)
+// LOAD
+
+//     sale_service_id
+
+// resident sale_basic
+// where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+// and match(sale_contractor_party_Group_N1,'KYNDRYL')
+// and sale_start_geo = 'AMS'
+// ;
+
+// left join(service_temp)
+// load 
+//     sale_service_id,
+//     sale_specific_info_service_type
+
+// resident sale_service_specific_data;
+
+// concatenate(Kyndryl)
+// load 
+//     sale_service_id,
+//     'Service Type' as sale_control_point_kyndryl,
+//     'BSO' as data_owner_kyndryl
+
+// resident service_temp
+// where len(trim(sale_specific_info_service_type)) = 0 ;
+
+// drop table service_temp;
+
+//----------------------------------------------------------------------------------
+// requested_temp:
+// left keep(sale_basic)
+// LOAD
+
+//     sale_service_id
+
+// resident sale_basic
+// where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+// and match(sale_contractor_party_Group_N1,'KYNDRYL')
+// and sale_start_geo = 'AMS'
+// ;
+
+// left join(requested_temp)
+// load 
+//     sale_service_id,
+//     sale_requested_service
+
+// resident sale_service_specific_data;
+
+// concatenate(Kyndryl)
+// load 
+//     sale_service_id,
+//     'Requested Service' as sale_control_point_kyndryl,
+//     'BSO' as data_owner_kyndryl
+
+// resident requested_temp
+// where len(trim(sale_requested_service)) = 0 or sale_requested_service = 'No match' or sale_requested_service = 0;
+
+// drop table requested_temp;
+
+//----------------------------------------------------------------------------------
+tracking_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+
+left join(tracking_temp)
+load 
+    sale_service_id,
+    Kyndryl_Sale_Service_Tracking_number
+
+resident kyndryl_specific_info;
+
+concatenate(Kyndryl)
+load 
+    sale_service_id,
+    'Tracking Number' as sale_control_point_kyndryl,
+    'OPS' as data_owner_kyndryl
+
+resident tracking_temp
+where len(trim(Kyndryl_Sale_Service_Tracking_number)) = 0 ;
+
+drop table tracking_temp;
+
+
+tracking_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo <> 'AMS'
+;
+
+left join(tracking_temp)
+load 
+    sale_service_id,
+    Kyndryl_Sale_Service_Tracking_number
+
+resident kyndryl_specific_info;
+
+concatenate(Kyndryl)
+load 
+    sale_service_id,
+    'Tracking Number' as sale_control_point_kyndryl,
+    'EMEA/APAC COE' as data_owner_kyndryl
+
+resident tracking_temp
+where len(trim(Kyndryl_Sale_Service_Tracking_number)) = 0 ;
+
+drop table tracking_temp;
+
+
+//---------------------------------------------------------------------------
+concatenate(Kyndryl)
+load 
+    sale_service_id,
+    'Loading Town' as sale_control_point_kyndryl,
+    'BSO' as data_owner_kyndryl
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_start_city)) = 0 
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(Kyndryl)
+load 
+    sale_service_id,
+    'Unloading Town' as sale_control_point_kyndryl,
+    'BSO' as data_owner_kyndryl
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_end_city)) = 0
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_start_geo = 'AMS'
+;
+
+
+//-----------------------------------------------------------------------------
+
+
+concatenate(Kyndryl)
+load 
+    sale_service_id,
+    'DEL BE' as sale_control_point_kyndryl,
+    'OPS' as data_owner_kyndryl
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_be_d_flag)) = 0
+and match(sale_contractor_party_Group_N1,'KYNDRYL')
+and sale_service_execution_followup = 'CL'
+;
+
+//-------------------------------------------------------------------------------------------Align
+
+Align:
+noconcatenate
+load distinct
+    sale_service_id,
+    'Priority' as sale_control_point_align,
+    'BSO' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and not match(sale_executed_SLA,'SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','FTL','LTL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+
+//--------------------------------------------------------------------------------------------
+concatenate(Align)
+load distinct
+    sale_service_id,
+    'Service Level' as sale_control_point_align,
+    'BSO' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and not match(sale_requested_SLA,'Standard','FTL','SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','HVP',
+'COMMON CARRIER LTL','SPECIALS','AD HOC7 COURIER PICK UP','TRUCKLOAD','HIGH VALUE PADDED VAN'
+,'COMMON CARRIER LTL','LTL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+//-----------------------------------------------------------------------------------------------
+
+concatenate(Align)
+load distinct
+    sale_service_id,
+    'Loading Name' as sale_control_point_align,
+    'BSO' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_start_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+
+//--------------------------------------------------------------------------------------------
+
+concatenate(Align)
+load distinct
+    sale_service_id,
+    'Loading Address' as sale_control_point_align,
+    'BSO' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_start_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+//---------------------------------------------------------------------------------------------------
+
+concatenate(Align)
+load distinct
+    sale_service_id,
+    'Starting Date' as sale_control_point_align,
+    'BSO' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_planned_start_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+//-----------------------------------------------------------------------------------------------------
+concatenate(Align)
+load distinct
+    sale_service_id,
+    'Ending Date' as sale_control_point_align,
+    'BSO' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_planned_end_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+
+
+//----------------------------------------------------------------------------------------------------
+
+concatenate(Align)
+load distinct
+    sale_service_id,
+    'Unloading Name' as sale_control_point_align,
+    'BSO' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_end_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+//---------------------------------------------------------------------------------------------------
+concatenate(Align)
+load distinct
+    sale_service_id,
+    'Unloading Address' as sale_control_point_align,
+    'BSO' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_end_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+
+//---------------------------------------------------------------------------------------------------
+concatenate(Align)
+load distinct
+    sale_service_id,
+    'Service Nature' as sale_control_point_align,
+    'BSO' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_nature)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+
+//-----------------------------------------------------------------------------------------------------
+
+Missing_carried_weight_temp:
+left keep(sale_basic)
+load    
+    sale_service_id,
+    sale_weight_kg
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+;
+
+
+concatenate(Align)
+load 
+    sale_service_id,
+    'Carried Weight' as sale_control_point_align,
+    'OPS' as data_owner_align
+
+resident Missing_carried_weight_temp
+where len(trim(sale_weight_kg)) = 0;
+
+drop table Missing_carried_weight_temp;
+
+
+
+//---------------------------------------------------------
+
+expected_qty_temp:
+left keep(sale_basic)
+load
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+;
+
+
+expected_qty_temp:
+left join(expected_qty_temp)
+LOAD
+
+    sale_service_id,
+    sale_item_unpacked_forecast_quantity
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_item_unpacked.qvd]
+(qvd) 
+;
+
+concatenate(Align)
+load 
+    sale_service_id,
+    'Expected Qty.' as sale_control_point_align,
+    'OPS' as data_owner_align
+
+resident expected_qty_temp
+where sale_item_unpacked_forecast_quantity = 0
+
+or len(trim(sale_item_unpacked_forecast_quantity)) = 0;
+
+drop table expected_qty_temp;
+
+
+//---------------------------------------------------------
+scac_temp:
+left keep(ibm_specific_info)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_Standard_Carrier_Alpha_Code)) = 0
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and match(sale_service_execution_followup,'CD','CL')
+;
+
+concatenate(Align)
+load 
+    sale_service_id,
+    'Scac Code' as sale_control_point_align,
+    'OPS' as data_owner_align
+
+resident scac_temp;
+
+drop table scac_temp;
+
+//---------------------------------------------------------
+
+// miles_temp:
+// left keep(sale_basic)
+// LOAD
+
+//     sale_service_id
+
+// resident sale_basic
+// where sale_from_code <> 'BROKER' and sale_service_execution_followup = 'CL'
+// and match(sale_contractor_party_Group_N1,'ALIGN')
+// and sale_start_geo = 'AMS'
+// ;
+
+// left join(miles_temp)
+// load 
+//     sale_service_id,
+//     IBM_Miles
+
+// resident ibm_specific_info;
+
+// left join(miles_temp)
+// load
+//     sale_service_id,
+//     buy_service_id
+
+// resident [sale-buy];
+
+// left join(miles_temp)
+// load 
+//     buy_service_id,
+//     Carrier
+// resident buy_basic;
+
+
+
+// concatenate(Align)
+// load 
+// sale_service_id,
+// 'Miles' as sale_control_point_align,
+// 'BV' as data_owner_align
+
+// resident miles_temp
+// where len(trim(IBM_Miles)) = 0 
+// and Carrier = 'PTRANS_US';
+
+// drop table miles_temp;
+
+
+//---------------------------------------------------------------------------
+concatenate(Align)
+load 
+    sale_service_id,
+    'Loading Town' as sale_control_point_align,
+    'BSO' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_start_city)) = 0 
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+
+concatenate(Align)
+load 
+    sale_service_id,
+    'Unloading Town' as sale_control_point_align,
+    'BSO' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_end_city)) = 0
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+
+
+
+
+
+
+//-----------------------------------------------------------------------------
+
+
+
+concatenate(Align)
+load 
+    sale_service_id,
+    'DEL BE' as sale_control_point_align,
+    'OPS' as data_owner_align
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_be_d_flag)) = 0
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_service_execution_followup = 'CL'
+;
+
+//-------------------------------------------------------------------------
+HAWB_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+
+left join(HAWB_temp)
+load 
+    sale_service_id,
+    Align_sale_service_Customer_House_Air_Way_Bill
+
+resident align_specific_info;
+
+concatenate(Align)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_align,
+    'OPS' as data_owner_align
+
+resident HAWB_temp
+where len(trim(Align_sale_service_Customer_House_Air_Way_Bill)) = 0 ;
+
+drop table HAWB_temp;
+
+
+
+HAWB_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo <> 'AMS'
+;
+
+left join(HAWB_temp)
+load 
+    sale_service_id,
+    Align_sale_service_Customer_House_Air_Way_Bill
+
+resident align_specific_info;
+
+concatenate(Align)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_align,
+    'EMEA/APAC COE' as data_owner_align
+
+resident HAWB_temp
+where len(trim(Align_sale_service_Customer_House_Air_Way_Bill)) = 0 ;
+
+drop table HAWB_temp;
+
+//-------------------------------------------------------------------------
+tracking_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+
+left join(tracking_temp)
+load 
+    sale_service_id,
+    Align_sale_service_Tracking_number
+
+resident align_specific_info;
+
+concatenate(Align)
+load 
+    sale_service_id,
+    'Tracking Number' as sale_control_point_align,
+    'OPS' as data_owner_align
+
+resident tracking_temp
+where len(trim(Align_sale_service_Tracking_number)) = 0;
+
+drop table tracking_temp;
+
+tracking_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo <> 'AMS'
+;
+
+left join(tracking_temp)
+load 
+    sale_service_id,
+    Align_sale_service_Tracking_number
+
+resident align_specific_info;
+
+concatenate(Align)
+load 
+    sale_service_id,
+    'Tracking Number' as sale_control_point_align,
+    'EMEA/APAC COE' as data_owner_align
+
+resident tracking_temp
+where len(trim(Align_sale_service_Tracking_number)) = 0;
+
+drop table tracking_temp;
+
+//-------------------------------------------------------------------------
+HAWB_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo = 'AMS'
+;
+
+left join(HAWB_temp)
+load 
+    sale_service_id,
+    sale_cuhawb
+
+resident sale_service_specific_data;
+
+concatenate(Align)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_align,
+    'OPS' as data_owner_align
+
+resident HAWB_temp
+where len(trim(sale_cuhawb)) = 0 ;
+
+drop table HAWB_temp;
+
+
+HAWB_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_start_geo <> 'AMS'
+;
+
+left join(HAWB_temp)
+load 
+    sale_service_id,
+    sale_cuhawb
+
+resident sale_service_specific_data;
+
+concatenate(Align)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_align,
+    'EMEA/APAC COE' as data_owner_align
+
+resident HAWB_temp
+where len(trim(sale_cuhawb)) = 0 ;
+
+drop table HAWB_temp;
+//--------------------------------------------------------------------------------ibm vendors
+
+
+ibm_vendors:
+noconcatenate
+load distinct
+    sale_service_id,
+    'Priority' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and not match(sale_executed_SLA,'SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','FTL','LTL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant' ;
+
+
+//--------------------------------------------------------------------------------------------
+weight_edi_temp:
+load distinct
+    buy_service_id
+
+resident buy_basic
+where buy_be_71_flag = 0 and
+EDI_flag = 'EDI'
+and match(buy_service_execution_followup,'CD','CL')
+
+;
+
+left join(weight_edi_temp)
+load distinct
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(weight_edi_temp)
+load distinct 
+    sale_service_id,
+    IsGNumber
+
+resident sale_basic;
+    
+
+concatenate(ibm_vendors)
+load distinct
+    sale_service_id,
+    'EDI Weight' as sale_control_point_vendor,
+    'OPS' as data_owner_vendor
+resident weight_edi_temp
+where IsGNumber <> 'Plant';
+
+drop table weight_edi_temp;
+
+
+weight_temp:
+load distinct
+    buy_service_id
+
+resident buy_basic
+where buy_be_71_flag = 0 and
+EDI_flag = 'No EDI'
+and match(buy_service_execution_followup,'CD','CL')
+;
+
+left join(weight_temp)
+load distinct
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(weight_temp)
+load distinct 
+    sale_service_id,
+    IsGNumber
+
+resident sale_basic;
+    
+
+concatenate(ibm_vendors)
+load distinct
+    sale_service_id,
+    'No EDI Weight' as sale_control_point_vendor,
+    'BV' as data_owner_vendor
+resident weight_temp
+where IsGNumber <> 'Plant';
+
+drop table weight_temp;
+
+//--------------------------------------------------------------------------------------------
+
+concatenate(ibm_vendors)
+load distinct
+    sale_service_id,
+    'Service Level' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and not match(sale_requested_SLA,'Standard','FTL','SL1','SL2','SL3','SLX','HC','STD','EXP','FCL','HVP',
+'COMMON CARRIER LTL','SPECIALS','AD HOC7 COURIER PICK UP','TRUCKLOAD','HIGH VALUE PADDED VAN'
+,'COMMON CARRIER LTL','LTL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant' ;
+//-----------------------------------------------------------------------------------------------
+
+concatenate(ibm_vendors)
+load distinct
+    sale_service_id,
+    'Loading Name' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_start_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant' ;
+
+//--------------------------------------------------------------------------------------------
+
+concatenate(ibm_vendors)
+load distinct
+    sale_service_id,
+    'Loading Address' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_start_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant' ;
+//---------------------------------------------------------------------------------------------------
+
+concatenate(ibm_vendors)
+load distinct
+    sale_service_id,
+    'Starting Date' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_planned_start_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant' ;
+//-----------------------------------------------------------------------------------------------------
+concatenate(ibm_vendors)
+load distinct
+    sale_service_id,
+    'Ending Date' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_planned_end_date)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant' ;
+
+
+//----------------------------------------------------------------------------------------------------
+
+concatenate(ibm_vendors)
+load distinct
+    sale_service_id,
+    'Unloading Name' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_end_name)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant' ;
+//---------------------------------------------------------------------------------------------------
+concatenate(ibm_vendors)
+load distinct
+    sale_service_id,
+    'Unloading Address' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_service_end_address)) = 0
+and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant' ;
+
+//-----------------------------------------------------------------------------------------------------
+
+Missing_carried_weight_temp:
+left keep(sale_basic)
+load    
+    sale_service_id,
+    sale_weight_kg
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant' ;
+
+
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Carried Weight' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident Missing_carried_weight_temp
+where len(trim(sale_weight_kg)) = 0;
+
+drop table Missing_carried_weight_temp;
+
+
+
+//---------------------------------------------------------
+
+expected_qty_temp:
+left keep(sale_basic)
+load
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant' ;
+
+
+expected_qty_temp:
+left join(expected_qty_temp)
+LOAD
+
+    sale_service_id,
+    sale_item_unpacked_forecast_quantity
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_item_unpacked.qvd]
+(qvd) ;
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Expected Qty.' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident expected_qty_temp
+where sale_item_unpacked_forecast_quantity = 0
+
+or len(trim(sale_item_unpacked_forecast_quantity)) = 0;
+
+drop table expected_qty_temp;
+
+
+//---------------------------------------------------------
+scac_temp:
+left keep(ibm_specific_info)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_Standard_Carrier_Alpha_Code)) = 0
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant'
+and match(sale_service_execution_followup,'CD','CL');
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Scac Code' as sale_control_point_vendor,
+    'OPS' as data_owner_vendor
+
+resident scac_temp;
+
+drop table scac_temp;
+
+//---------------------------------------------------------
+
+miles_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' //and sale_service_execution_followup = 'CL'
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant'
+and match(IBM_Standard_Carrier_Alpha_Code,'GF09','GF37','GF50','GFPV','GF02','GF08','GF26','GF02','GF04','GF29','GF28','GF72')
+and sale_start_geo = 'AMS'
+;
+
+left join(miles_temp)
+load 
+    sale_service_id,
+    IBM_Miles
+
+resident ibm_specific_info;
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Miles' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident miles_temp
+where len(trim(IBM_Miles)) = 0 ;
+
+drop table miles_temp;
+
+
+//------------------------------------------------
+
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Customer HAWB' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+
+resident sale_basic
+where sale_from_code <> 'BROKER' 
+and len(trim(IBM_CUSTOMER_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant'
+and wildmatch(sale_service_start_name,'*JABIL*','*FLEX*','*PARAGON*','*CISCO*','BDT*','FOXC*','MERCU*','SEAG*');
+;
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Customer HAWB' as sale_control_point_vendor,
+    'OPS' as data_owner_vendor
+
+
+resident sale_basic
+where sale_from_code <> 'BROKER' 
+and len(trim(IBM_CUSTOMER_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and not wildmatch(sale_service_start_name,'*JABIL*','*FLEX*','*PARAGON*','*CISCO*','BDT*','FOXC*','MERCU*','SEAG*')
+and IsGNumber <> 'Plant';
+
+
+//---------------------------------------------------------------
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_vendor,
+    'OPS' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant'
+and sale_from_to_state <> 'NYNY'
+
+;
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'HAWB' as sale_control_point_vendor,
+    'OPS' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_HAWB)) = 0 
+and match(sale_service_execution_followup,'CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant'
+and sale_from_to_state = 'NYNY';
+
+//--------------------------------------------------------------------
+
+Order_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant';
+
+left join(Order_temp)
+load 
+    sale_service_id,
+    sale_order_type
+
+resident sale_service_specific_data;
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Order Type' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+resident Order_temp
+where len(trim(sale_order_type)) = 0 
+or  not match(sale_order_type,'SOS','VENDOR','OTHER','PLATFORM','REVERSE')
+;
+
+drop table Order_temp;
+
+//----------------------------------------------------------------------------------
+service_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant';
+
+left join(service_temp)
+load 
+    sale_service_id,
+    sale_specific_info_service_type
+
+resident sale_service_specific_data;
+
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Service Type' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+
+resident service_temp
+where len(trim(sale_specific_info_service_type)) = 0 ;
+
+drop table service_temp;
+
+//----------------------------------------------------------------------------------
+requested_temp:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant';
+
+left join(requested_temp)
+load 
+    sale_service_id,
+    IBM_REQUESTED_SERVICE
+
+resident ibm_specific_info;
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Requested Service' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+
+resident requested_temp
+where len(trim(IBM_REQUESTED_SERVICE)) = 0 or upper(IBM_REQUESTED_SERVICE) = 'NO MATCH' or IBM_REQUESTED_SERVICE = 0;
+
+drop table requested_temp;
+
+
+//---------------------------------------------------------------------------
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Loading Town' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_start_city)) = 0
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant';
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Unloading Town' as sale_control_point_vendor,
+    'BSO' as data_owner_vendor
+
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_end_city)) = 0
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant';
+
+//--------------------------------------------------------------------------------
+
+
+// account_temp:
+// left keep(sale_basic)
+// LOAD
+
+//     sale_service_id
+
+// resident sale_basic
+// where sale_from_code <> 'BROKER' and match(sale_service_execution_followup,'APP','CD','CL')
+// and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+// and IsGNumber <> 'Plant';
+
+// left join(account_temp)
+// load 
+//     sale_service_id,
+//     IBM_BUYER_ACCOUNT_CODE
+
+// resident ibm_specific_info;
+
+// concatenate(ibm_vendors)
+// load 
+//     sale_service_id,
+//     'Account Code' as sale_control_point_vendor,
+//     'BSO' as data_owner_vendor
+
+
+// resident account_temp
+// where len(trim(IBM_BUYER_ACCOUNT_CODE)) = 0 ;
+
+// drop table account_temp;
+
+//--------------------------------------------------------------------------------------
+
+// adhoc_temp:
+// left keep(sale_basic)
+// LOAD
+
+//     sale_service_id
+
+// resident sale_basic
+// where  match(sale_service_execution_followup,'CD','CL')
+// and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+// and IsGNumber <> 'Plant';
+
+// left join(adhoc_temp)
+// load 
+//     sale_service_id,
+//     IBM_customer_adhoc_reference
+
+// resident ibm_specific_info;
+
+// concatenate(ibm_vendors)
+// load 
+//     sale_service_id,
+//     'Adhoc Reference' as sale_control_point_vendor,
+//     'OPS' as data_owner_vendor
+
+
+// resident adhoc_temp
+// where len(trim(IBM_customer_adhoc_reference)) = 0 ;
+
+// drop table adhoc_temp;
+
+
+//-----------------------------------------------------------------------------
+//concatenate(ibm_vendors)
+//load 
+//    sale_service_id,
+//    'PU BE' as sale_control_point_vendor,
+//    'OPS' as data_owner_vendor
+
+//resident sale_basic
+//where len(trim(sale_be_af_flag)) = 0
+//and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+//and IsGNumber <> 'Plant';
+
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'DEL BE' as sale_control_point_vendor,
+    'OPS' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(sale_be_d_flag)) = 0
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant'
+and sale_service_execution_followup = 'CL'
+;
+
+concatenate(ibm_vendors)
+load 
+    sale_service_id,
+    'Tracking Number' as sale_control_point_vendor,
+    'OPS' as data_owner_vendor
+
+resident sale_basic
+where sale_from_code <> 'BROKER' and len(trim(IBM_TRACKING_NUMBER)) = 0
+and GEODIS_ops_Team = 'Intra Team' and match(sale_contractor_party_Group_N1,'IBM_FIGO','DT','SOFTLYR_MD')
+and IsGNumber <> 'Plant'
+and match(sale_service_execution_followup,'CD','CL')
+;
+
+perfect_order:
+load distinct
+    sale_service_id,
+    sale_control_point_interpipes as sale_control_point,
+    data_owner_interpipes as data_owner,
+    'interpipes' as scope
+
+resident IBM_Interpipes;
+
+
+concatenate(perfect_order)
+load distinct
+    sale_service_id,
+    sale_control_point_broker as sale_control_point,
+    data_owner_broker as data_owner,
+    'broker' as scope
+
+resident ibm_broker;
+
+concatenate(perfect_order)
+load distinct
+    sale_service_id,
+    sale_control_point_plant as sale_control_point,
+    data_owner_plant as data_owner,
+    'plant' as scope
+
+resident ibm_plant;
+
+concatenate(perfect_order)
+load distinct
+    sale_service_id,
+    sale_control_point_vendor as sale_control_point,
+    data_owner_vendor as data_owner,
+    'vendor' as scope
+
+resident ibm_vendors;
+
+
+
+concatenate(perfect_order)
+load distinct
+    sale_service_id,
+    sale_control_point_white_glove as sale_control_point,
+    data_owner_white_glove as data_owner,
+    'white glove' as scope
+
+resident new_co;
+
+
+concatenate(perfect_order)
+load distinct
+    sale_service_id,
+    sale_control_point_kyndryl as sale_control_point,
+    data_owner_kyndryl as data_owner,
+    'kyndryl' as scope
+
+resident Kyndryl;
+
+concatenate(perfect_order)
+load distinct
+    sale_service_id,
+    sale_control_point_align as sale_control_point,
+    data_owner_align as data_owner,
+    'align' as scope
+
+resident Align;
+
+drop table Align;
+drop table Kyndryl;
+drop table new_co;
+drop table ibm_vendors;
+drop table ibm_plant;
+drop table IBM_Interpipes;
+drop table ibm_broker;
+
+
+concatenate(perfect_order)
+load distinct 
+    sale_service_id,
+    'Amounts' as sale_control_point,
+    'OPS' as data_owner
+
+resident cp_amount
+where cp_sale_buy_amount_difference = 'Incorrect'
+and amount_flag = 1;
+
+
+perfect_order_store:
+noconcatenate
+load distinct
+    *,
+    today() as report_day
+
+resident perfect_order
+where not match(sale_control_point ,'','Amounts');
+
+SET pathReport = '[lib://Geo_AMS/Automation/BI/Plugins/Reports/Perfect Order/perfect_order_current.csv]';
+
+
+Store [perfect_order_store] into $(pathReport) (txt);
+
+drop table perfect_order_store;
+
+
+    
+
+
+

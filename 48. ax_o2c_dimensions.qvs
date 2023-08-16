@@ -1,0 +1,23 @@
+o2c_AX:
+noconcatenate
+load 
+    sale_service_id,
+    sale_contractor_party_Group_N1 & 'Revenue' & sale_executor_short_name as o2c_ax_key
+
+resident sale_basic;
+
+left join(o2c_AX)
+LOAD
+
+    PCC as ax_pcc,
+    "Contract code" as ax_contract_code,
+    "Function Code" as ax_pcc_function,
+    Product as ax_product,
+    Offer as ax_offer,
+    Accounts as ax_account,
+    o2c_ax_key
+
+FROM [lib://Geo_AMS/Automation/BI/Finance/AX Dimensions/Dimensiones .xlsx]
+(ooxml, embedded labels, table is Hoja1)
+where Description = 'Sales';
+

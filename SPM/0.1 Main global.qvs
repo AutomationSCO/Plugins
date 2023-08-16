@@ -1,0 +1,9 @@
+//MK: all Geodis scope
+let vDateBracke = date(addmonths('$(vToday)',-12),'DD/MM/YY');
+set vContractorZenith = 'IBM_FIGO','DT','SOFTLYR_MD','DC','NEWCUS','KSM','ALIGN','KYNDRYL','IBM_SO','IBM_NCS';
+set vContractorMpo = 'SCO_AMS_ALIGN','SCO_AMS_KEISER','SCO_WW_HID','SCO_COMPUTACENTER','SCO_WW_SOLIDIGM','BP','SCO_AMS_WHITE_GLOVE','SCO_WW_KYNDRYL';
+set vContractorNAP = 'IBM_FIGO','SOFTLYR_MD';
+set vLane = 'Inter Team','Intra Team';
+set vGeo2Geo = 'No','No';
+set vGeo2Geo = 'No','No';
+set vFedexRPA = 'Yes';

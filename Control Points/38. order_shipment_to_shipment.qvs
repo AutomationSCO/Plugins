@@ -1,0 +1,31 @@
+eorder2mpo_temp:
+noconcatenate
+load distinct
+
+    hu_reference
+
+resident Eorder_Shipment
+;
+
+
+
+left join(eorder2mpo_temp)
+load 
+    hu_reference,
+    sale_service_id
+
+resident sale_basic;
+
+
+eorder2mpo:
+noconcatenate
+load
+    'Incorrect' as cp_order_to_service,
+    hu_reference
+
+
+
+resident eorder2mpo_temp
+where len(trim(sale_service_id)) = 0 ;
+
+drop table eorder2mpo_temp;

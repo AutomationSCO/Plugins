@@ -1,0 +1,30 @@
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Network Visibility/4PL/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/4. HU_Items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/16. Buy_LastBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/14. DIMC.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/8. Precall.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/15. Sale_FirstBE.qvs]);
+//$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/34. Full BEs.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/54. buy_specific_info_ibm.qvs]);
+
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/1.1 missing_awb 4PL.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/2.1 dues 4PL.qvs]);
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/4. Amount.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/7. timeliness_completeness.qvs]);
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/8. cw_timeliness_completeness.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/20. missing_hawb.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/21. missing_chawb.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/22. missing_tracking_number.qvs]);
+
+exit script;
+

@@ -1,0 +1,87 @@
+[Eorder_Shipment_temp]: //Shipments - Kyndryl
+LOAD Distinct
+
+    //if(sale_service_business_scope_path = 'GEODIS.SOLIDIGM',sale_service_receiver_reference,
+    if(sale_service_business_scope_path = 'GEODIS.SOLIDIGM',sale_service_shipper_reference) as eorder_order_to_shipment_key,
+    sale_service_id AS hu_reference,
+    if(len(sale_service_status) = 0 , 'BLANK',sale_service_status) as eorder_shipment_status_id,
+    sale_service_business_scope_path as eorder_shipment_client_path,
+    sale_service_creation_user_name & ' ' &  sale_service_creation_user_last_name as eorder_shipment_creation_user,
+    sale_service_creation_user_email as eorder_shipment_creation_user_email,
+    sale_service_Start_Logistic_Point_Code as eorder_shipment_Start_Logistic_Point_Code,
+    sale_service_Start_Logistic_Point_Short_Name as eorder_shipment_Start_Logistic_Point_Short_Name,
+    sale_service_Start_Logistic_Point_Corporate_Name as eorder_shipment_Start_Logistic_Point_Corporate_Name,
+    sale_service_Start_Logistic_Point_Type as eorder_shipment_Start_Logistic_Point_Type,
+    sale_service_End_Logistic_Point_Code as eorder_shipment_End_Logistic_Point_Code,
+    sale_service_End_Logistic_Point_Short_Name as eorder_shipment_End_Logistic_Point_Short_Name,
+    sale_service_End_Logistic_Point_Corporate_Name as eorder_shipment_End_Logistic_Point_Corporate_Name,
+    sale_service_End_Logistic_Point_Type as eorder_shipment_End_Logistic_Point_Type,
+    sale_service_start_name as eorder_shipment_start_name,
+    sale_service_start_address as eorder_shipment_start_address,
+    sale_start_country as eorder_shipment_start_country,
+    sale_start_city as eorder_shipment_start_city,
+    sale_service_end_name as eorder_shipment_end_name,
+    sale_service_end_address as eorder_shipment_end_address,
+    sale_end_country as eorder_shipment_end_country,
+    sale_end_city as eorder_shipment_end_city,
+    sale_service_update_date as eorder_shipment_update_date,
+    sale_creation_date as eorder_shipment_creation_date,
+    sale_service_shipper_reference as eorder_shipment_shipper_reference,
+    sale_service_receiver_reference as eorder_shipment_receiver_reference,
+    sale_service_update_date as eorder_shipment_service_update_date,
+    sale_service_portal as eorder_shipment_service_portal,
+    sale_service_external_id as eorder_shipment_external_id,
+    sale_service_system_id as eorder_shipment_system_id,
+    sale_planned_start_datetime_before as eorder_shipment_planned_start_date,
+    sale_planned_end_datetime_before as eorder_shipment_planned_end_date,
+    num(sale_weight_kg,'# ###.000','.',' ') as eorder_shipment_weight_kg,
+    num(sale_weight_kg,'# ###.000','.',' ') * 2.204 as eorder_shipment_weight_lb
+
+
+FROM [lib://SCO-BI-Common Shared Data  Transormed/Geoflow_Sale_Service_Transformed.qvd] (qvd)
+where wildmatch(sale_service_business_scope_path,$(vEorderShipment))
+and sale_service_status <> 'CANCELLED'
+and sale_creation_date >='$(vDateBracke)'
+;
+
+
+left join(Eorder_Shipment_temp)
+load
+    cso_number as hu_reference,
+    'Out' as exclude_data_model
+    
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/SQTSCS/CP Netting.xlsx]
+(ooxml, embedded labels, table is [Exclude Data Model]);
+
+Eorder_Shipment:
+noconcatenate
+Load  distinct
+    *   
+resident Eorder_Shipment_temp
+where len(exclude_data_model) = 0 ;
+
+
+drop table Eorder_Shipment_temp;
+
+drop field exclude_data_model from Eorder_Shipment;
+
+//Geografia origen
+[geo_origin_sale]:
+left join ([Eorder_Shipment])
+LOAD
+    country as eorder_shipment_start_country,
+    Geo_Code as order_shipment_start_geo
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_REF_country.qvd]
+(qvd);
+
+
+//Geofrafia destino
+[geo_destination_sale]:
+left join ([Eorder_Shipment])
+LOAD
+    country as eorder_shipment_end_country,
+    Geo_Code as order_shipment_end_geo
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_REF_country.qvd]
+(qvd) ;

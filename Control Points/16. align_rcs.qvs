@@ -1,0 +1,12 @@
+// 28. Reason Codes -------------------------------------------------------------------------------------------------------------------------------------
+
+cp_missing_reason_codes:
+left keep(sale_basic)
+LOAD
+    cso_number as sale_service_id,
+    if(Pickup_RC_Status = 'Missing RC','1') as align_pickup_rc_status,
+    if(Delivery_RC_Status = 'Missing RC','1') as align_delivery_rc_status
+ 
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/Reports/Pending_RCs_Align.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq)
+where Pickup_RC_Status = 'Missing RC' or Delivery_RC_Status = 'Missing RC';

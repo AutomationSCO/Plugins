@@ -1,0 +1,106 @@
+Section application;
+//Scope Info-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+[sale_basic_temp_1]:
+noconcatenate
+LOAD Distinct
+    $(vZenith)
+
+FROM [lib://SCO-BI-Common Shared Data  Transormed/Geoflow_Sale_Service_Transformed.qvd] (qvd)
+WHERE 
+
+    APP_Source = 'Zenith'
+    AND sale_creation_date >='$(vDateBracke)'
+    AND Match([sale_contractor_party_Group_N1],$(vContractorZenith))
+    AND MATCH([sale_service_execution_followup],$(vStatus))
+    AND not Match(Party_Short_Name_sale_executor_party,$(vAgency))
+    //AND match(Year(If(IsNull(sale_actual_end_date),sale_planned_end_date_before,sale_actual_end_date)),'$(vPastyear)','$(vCurrentYear)')
+    and not match(sale_service_short_name,'IBMMAFDXGSP/CA','IBM_MD_NB','IBMMDCA/TAX-SUPP','IBMMDCA/GARS-FEE','IBM_MD_US/GSP')
+    
+    or
+
+    
+    APP_Source = 'Zenith'
+    AND sale_actual_end_date >='$(vDateBracke)'
+    AND Match([sale_contractor_party_Group_N1],$(vContractorZenith))
+    AND MATCH([sale_service_execution_followup],$(vStatus))
+    AND not Match(Party_Short_Name_sale_executor_party,$(vAgency))
+    //AND match(Year(If(IsNull(sale_actual_end_date),sale_planned_end_date_before,sale_actual_end_date)),'$(vPastyear)','$(vCurrentYear)')
+    and not match(sale_service_short_name,'IBM_MD_NB','IBMMDCA/TAX-SUPP','IBMMDCA/GARS-FEE',//'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBMMAFDXGSP/CA'
+    )
+
+
+
+
+;
+
+
+
+[MPO_temp]:
+noconcatenate
+LOAD Distinct
+    $(vMPO)    
+FROM [lib://SCO-BI-Common Shared Data  Transormed/Geoflow_Sale_Service_Transformed.qvd] (qvd)
+where APP_Source = 'MPO'
+and match(sale_contractor_party_Group_N2,$(vContractorMpo))
+and not match(sale_service_status,'SHIPMENT CANCELED')
+AND sale_creation_date >='$(vDateBracke)'
+and MATCH(sale_service_status,$(vStatus))
+
+or
+
+APP_Source = 'MPO'
+and match(sale_contractor_party_Group_N2,$(vContractorMpo))
+and not match(sale_service_status,'SHIPMENT CANCELED')
+AND sale_actual_end_date >='$(vDateBracke)'
+and MATCH(sale_service_status,$(vStatus));
+
+
+left join(MPO_temp)
+Load 
+
+    zip as sale_start_zip_code,
+    state AS sale_start_state
+
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/zip_code_database.xls]
+(biff, embedded labels, table is zip_code_database$);
+
+left join(MPO_temp)
+load
+
+    zip as sale_end_zip_code,
+    state AS sale_end_state
+
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/zip_code_database.xls]
+(biff, embedded labels, table is zip_code_database$);
+
+mpo_pu:
+left join(MPO_temp)
+LOAD
+
+    sale_service_id,
+    date(sale_event_actual_date) as sale_actual_start_date
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_BE.qvd]
+(qvd)
+where match(sale_event_code,$(vPUEvent));
+
+left join(MPO_temp)
+LOAD
+
+    sale_service_id,
+    sale_service_Party_id as sale_executor_short_name
+FROM [lib://SCO-BI-Common Shared Data  Transormed/Geoflow_Sale_Service_other_party.qvd]
+(qvd)
+where sale_service_Party_type = 'BILL_FROM'
+;
+
+
+[MPO]:
+concatenate(sale_basic_temp_1)
+LOAD
+    *
+resident MPO_temp;
+
+drop table MPO_temp;

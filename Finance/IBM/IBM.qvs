@@ -1,0 +1,14 @@
+﻿$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Finance/IBM/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Finance/Dashboard/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/12. Specific_data_all_clients_buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/15. Sale_FirstBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/16. Buy_LastBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/21. eorder_HU.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/27. buy_finance_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/65. sale_last_be.qvs]);
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/7. timeliness_completeness.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/31. net_on_time.qvs]);

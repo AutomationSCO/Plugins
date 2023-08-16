@@ -1,0 +1,14 @@
+
+[buy_itinerary]:
+left keep([buy_basic])
+LOAD
+    
+    v_TRITINER.TRAJET & v_TRITINER.NUMPNT as buy_itinerary_id,
+    v_TRITINER.ACTIVI as buy_itineratyMilestone,
+    v_TRITINER.NUMPNT as buy_itineratyReference,
+    v_TRITINER.RAISOC as buy_itineraryName,
+    v_TRITINER.TRAJET as buy_service_id,
+    v_TRITINER.DATEDR as buy_itineraryActualDate
+
+FROM [lib://QVD Ops_Cognos/v_TRITINER.qvd]
+(qvd);

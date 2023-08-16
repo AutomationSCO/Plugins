@@ -1,0 +1,212 @@
+[align_hypercare]:
+left keep(sale_basic)
+LOAD distinct
+
+    CSO as sale_service_id,
+    "Arrival at dest port" as AO_Arrival_Dest_Port,
+    "Vessel unloaded" as AO_Vessel_Unloaded,
+    "Port appointment" as AO_Port_Appointment,
+    "Delivery appointment" as AO_Delivery_Appointment,
+    "ISF Filled" as AO_ISF_Filled,
+    Inbond,
+    "Temp. Data Logger" as align_hypercare_temp_data_logger,
+    Container as align_hypercare_container,
+    "Container Type" as align_hypercare_container_type
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/Align/Hypecare Align V2.xlsx]
+(ooxml, embedded labels, table is [ACTIVE SHIPMENTS ]);
+
+
+// 24. Missing Vessel -------------------------------------------------------------------------------------------------------------------------------------
+
+[cp_missing_vessel_temp]:
+left keep (sale_basic)
+LOAD Distinct
+    sale_service_id
+
+resident sale_basic
+where match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_end_geo = 'AMS'
+and sale_MOT = 'Ocean'
+and match(sale_service_execution_followup,'CD','APP')
+and match(GEODIS_ops_Team,'Inter Team')
+and not match(net_flag,1);
+
+
+
+left join(cp_missing_vessel_temp)
+load distinct
+    sale_service_id,
+    if(isnull(AO_Vessel_Unloaded),1,0) as Vessel_Flag
+
+resident align_hypercare;
+
+[cp_missing_vessel]:
+noconcatenate
+load distinct 
+    sale_service_id,
+    if(Vessel_Flag = 0,'Incorrect','Correct') as cp_missing_vessel
+
+resident cp_missing_vessel_temp
+;
+
+drop table cp_missing_vessel_temp;
+
+
+// 25 Missing Port Appointment -------------------------------------------------------------------------------------------------------------------------------------
+[cp_missing_port_appointment_temp]:
+left keep (sale_basic)
+LOAD Distinct
+    sale_service_id
+
+resident sale_basic
+where match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_end_geo = 'AMS'
+and sale_MOT = 'Ocean'
+and match(sale_service_execution_followup,'CD','APP')
+and not match(net_flag,1);
+
+left join(cp_missing_port_appointment_temp)
+load distinct
+    sale_service_id,
+    cp_missing_vessel
+
+resident cp_missing_vessel;
+
+
+
+left join(cp_missing_port_appointment_temp)
+load distinct
+    sale_service_id,
+    AO_Port_Appointment
+
+resident align_hypercare;
+
+
+[cp_missing_port_appointment]:
+noconcatenate
+load distinct
+    sale_service_id,
+    if(isnull(AO_Port_Appointment),'Incorrect','Correct') as cp_missing_port_appointment
+
+resident cp_missing_port_appointment_temp
+where cp_missing_vessel = 'Correct';
+
+drop table cp_missing_port_appointment_temp;
+
+// 26 Missing Delivery Appt -------------------------------------------------------------------------------------------------------------------------------------
+
+[cp_missing_delivery_appointment_temp]:
+left keep (sale_basic)
+LOAD Distinct
+    sale_service_id
+
+resident sale_basic
+where match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_end_geo = 'AMS'
+and sale_MOT = 'Ocean'
+and match(sale_service_execution_followup,'CD','APP')
+and not match(net_flag,1);
+
+left join(cp_missing_delivery_appointment_temp)
+load distinct
+    sale_service_id,
+    cp_missing_port_appointment
+
+resident cp_missing_port_appointment;
+
+
+left join(cp_missing_delivery_appointment_temp)
+load distinct
+    sale_service_id,
+    AO_Delivery_Appointment
+
+resident align_hypercare;
+
+
+[cp_missing_delivery_appointment]:
+noconcatenate
+load distinct
+    sale_service_id,
+    if(isnull(AO_Delivery_Appointment),'Incorrect','Correct') as cp_missing_delivery_appointment
+
+resident cp_missing_delivery_appointment_temp
+where cp_missing_port_appointment = 'Correct';
+
+drop table cp_missing_delivery_appointment_temp;
+
+// 27 Missing ISF -------------------------------------------------------------------------------------------------------------------------------------
+[cp_missing_isf_temp]:
+left keep (sale_basic)
+LOAD Distinct
+    sale_service_id
+
+resident sale_basic
+where match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_end_geo = 'AMS'
+and sale_MOT = 'Ocean'
+and match(sale_service_execution_followup,'CD')
+and not match(net_flag,1);
+
+
+left join(cp_missing_isf_temp)
+load distinct
+    sale_service_id,
+    AO_ISF_Filled
+
+resident align_hypercare;
+
+[cp_missing_isf]:
+noconcatenate
+load distinct 
+    sale_service_id,
+    if(AO_ISF_Filled='Yes','Correct','Incorrect') as cp_missing_isf
+
+resident cp_missing_isf_temp;
+
+ drop table cp_missing_isf_temp;
+
+ //29. Missing Inbond ------------------------------------------------------------------------------------------------------------------------------------
+
+[cp_inbond_temp]:
+left keep (sale_basic)
+LOAD Distinct
+    sale_service_id
+
+resident sale_basic
+where match(sale_contractor_party_Group_N1,'ALIGN')
+and sale_end_country = 'US'
+and not match(sale_start_country,'US')
+and sale_MOT = 'Ocean'
+and match(sale_service_execution_followup,'CL')
+and not match(net_flag,1);
+
+
+left join(cp_inbond_temp)
+load distinct
+    sale_service_id,
+    if(isnull(Inbond),'Incorrect') as Inbond
+
+resident align_hypercare;
+
+
+[cp_inbond]:
+noconcatenate
+load distinct
+    sale_service_id,
+    'Incorrect' as cp_inbond
+
+resident cp_inbond_temp
+where Inbond = 'Incorrect';
+
+drop table cp_inbond_temp;
+
+//---------------------------------------------------------------------------
+data_logger:
+noconcatenate
+load distinct
+    sale_service_id,
+    'Incorrect' as cp_data_logger
+resident align_hypercare
+where align_hypercare_container_type = '40 REF'
+and len(align_hypercare_temp_data_logger) = 0;

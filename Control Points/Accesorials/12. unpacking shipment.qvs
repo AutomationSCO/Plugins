@@ -1,0 +1,61 @@
+unpacking_temp:
+noconcatenate
+load DISTINCT
+    hu_reference,
+    1 as eorder_accesorial_required
+resident Eorder_shipment_accesorials
+where eorder_shipment_acc_unpacking  = '-1';
+
+
+
+left join(unpacking_temp)
+load DISTINCT
+    sale_service_id,
+    hu_reference
+
+resident sale_basic;
+
+left join(unpacking_temp)
+load DISTINCT
+    sale_service_id,
+    1 as zenith_accesorial_flag
+resident sale_tariff_items
+where sale_tariff_item_consolidated = 'PACKING & UNPACKING';
+
+
+unpacking_shipment:
+noconcatenate
+load DISTINCT
+    sale_service_id,
+    'Incorrect' as cp_accesorial_unpacking_shipment
+resident unpacking_temp
+where len(trim(zenith_accesorial_flag)) = 0;
+
+drop table unpacking_temp;
+
+
+unpacking_rpa_temp:
+noconcatenate
+load DISTINCT
+    *   
+resident unpacking;
+
+left join(unpacking_rpa_temp)
+load distinct 
+    sale_service_id,
+    sale_invoice_follow_up
+resident FA;
+
+unpacking_rpa:
+noconcatenate
+load DISTINCT
+    sale_service_id as 'Service Number',
+    1 as 'REPACKING & UNPACKING REALOCATION | Invoiced quantity'
+resident unpacking_rpa_temp
+where sale_invoice_follow_up = '2. Not Invoiced' ;
+
+drop table unpacking_rpa_temp;
+
+Store unpacking_rpa into [lib://Geo_AMS/Automation\file_operations\from_qlik/Accesorial Automation/unpacking_Shipment_rpa.csv](txt);
+
+drop table unpacking_rpa;

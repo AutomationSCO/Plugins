@@ -1,0 +1,8 @@
+let vDateBracke = date(addmonths('$(vToday)',-12),'DD/MM/YY');
+set vContractorZenith = 'No','No';
+set vContractorMpo = 'SCO_AMS_WHITE_GLOVE','No';
+set vContractorNAP = 'No','No';
+set vEorderShipment = 'No','No';
+set vEorderOrder = 'No','No';
+set vLane = 'Inter Team','Intra Team';
+set vGeo2Geo = 'No','No';

@@ -1,0 +1,4 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0.1 Main geo_bi.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/32. weather.qvs]);

@@ -1,0 +1,38 @@
+cp_incorrect_consolidation_temp_temp:
+NoConcatenate
+Load
+	buy_service_id,
+	buy_hawb
+resident buy_service_specific_data
+where len(buy_hawb) <> 0;
+
+left join(cp_incorrect_consolidation_temp_temp)
+load
+	buy_service_id,
+    buy_service_nature
+resident buy_basic;
+    
+
+
+cp_incorrect_consolidation_temp:
+NoConcatenate
+Load
+	buy_hawb,
+    count(buy_hawb & buy_service_nature) as cp_temp
+    
+resident cp_incorrect_consolidation_temp_temp
+group by buy_hawb
+;
+
+drop table cp_incorrect_consolidation_temp_temp;
+
+
+cp_incorrect_consolidation:
+noconcatenate
+Load
+	buy_hawb,
+	if(cp_temp <> 1, 'Incorrect') as cp_incorrect_consolidation
+    
+resident cp_incorrect_consolidation_temp;
+
+drop table cp_incorrect_consolidation_temp;

@@ -1,0 +1,18 @@
+ibm_specific_info:
+left keep(sale_basic)
+LOAD
+    sale_service_id,
+    IBM_CSO_Carrier_Weight,
+    //IBM_Order_Type,
+    IBM_Service_TYPE,
+    IBM_REQUESTED_SERVICE,
+    IBM_BUYER_ACCOUNT_CODE,
+    IBM_customer_adhoc_reference,
+    IBM_Miles,
+    IBM_freight_method,
+    if(wildmatch(IBM_Ship_To_Code,'A*','*U17','834426','895C70'),1,0) as fdx_bso_flag
+
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_Sale_Service_IBM.qvd]
+(qvd)
+where len(trim(sale_service_id)) > 1;

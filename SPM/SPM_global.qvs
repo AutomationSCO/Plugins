@@ -1,0 +1,331 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/SPM/0.1 Main global.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+
+
+
+[spm_sale_basic]:
+Noconcatenate
+LOAD
+    *,
+    If(Match(IBM_Standard_Carrier_Alpha_Code,'GF09','GF24','GF30'),'FTL',
+        If(Match(IBM_Standard_Carrier_Alpha_Code,'GF20','GF05','GFLT','GF14','GF21','GF17'),'FTL',
+            If(Match(IBM_Standard_Carrier_Alpha_Code,'GF07','GF33','GF03','GF06','GFHW','GFGF','GF04','GF01','GFG','MAINFRT','MAINFRT_US','3DFF'),'HWA',
+                If(Match(IBM_Standard_Carrier_Alpha_Code,'GF26','GF02','GF08','GF12','GFPV','GF29','GF28','MAINFPV','MAINFTC'),'SPECIALIZED',
+                    If(IBM_Standard_Carrier_Alpha_Code='GFFBROKERG','CUSTOMS', 'MISSING SCAC'))))) as sale_typetransport
+
+RESIDENT [sale_basic];
+
+Drop Table  [sale_basic];
+
+Rename Table spm_sale_basic to sale_basic;
+
+[spm_sale-buy]:
+left Keep ([sale_basic])
+ LOAD
+    *
+    
+
+resident [sale-buy];
+
+
+Drop table [sale-buy];
+
+
+
+[spm_buy_basic]:
+left Keep ([spm_sale-buy])
+ LOAD
+  *,
+  Carrier & buy_executed_SLA & buy_start_state & buy_end_state as Key_state_to_state,
+  Carrier & buy_executed_SLA & buy_start_city & buy_end_city as key_city_to_city,
+  Carrier & buy_start_country & buy_end_country & buy_executed_SLA as key_country_to_country
+  
+
+resident [buy_basic];   
+
+Drop table [buy_basic];
+
+Rename Table spm_buy_basic to buy_basic;
+Rename Table [spm_sale-buy] to [sale-buy];
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/14. DIMC.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/16. Buy_LastBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/8. Precall.qvs]);
+
+
+//SPM----------------------------------------------------------------
+spm_state_to_state:
+left keep(buy_basic)
+LOAD
+    TT as spm_state_to_state_TT,
+    Key_state_to_state
+FROM [lib://Geo_AMS/Automation/BI/SPM/SPM 2.0 MATRIX.xlsx]
+(ooxml, embedded labels, table is [MATRIZ state_to_state]);
+
+
+
+spm_city_to_city:
+left keep(buy_basic)
+LOAD
+    TT as spm_city_to_city_TT,
+    key_city_to_city
+FROM [lib://Geo_AMS/Automation/BI/SPM/SPM 2.0 MATRIX.xlsx]
+(ooxml, embedded labels, table is [MATRIX city_to_city]);
+
+spm_country_to_country:
+left keep(buy_basic)
+LOAD
+    TT as spm_country_to_country_TT,
+    key_country_to_country
+FROM [lib://Geo_AMS/Automation/BI/SPM/SPM 2.0 MATRIX.xlsx]
+(ooxml, embedded labels, table is [MATRIX country_to_country]);
+
+
+spm_beyond_temp:
+noconcatenate
+load
+    buy_end_zip_code
+
+resident buy_basic;
+
+
+left join(spm_beyond_temp)
+LOAD
+    "Unloading Zip Code" as buy_end_zip_code,
+    1 as beyond_flag
+FROM [lib://Geo_AMS/Automation/BI/SPM/SPM 2.0 MATRIX.xlsx]
+(ooxml, embedded labels, table is [BEYOND POINTS]);
+
+spm_beyond:
+noconcatenate
+load distinct
+    buy_end_zip_code,
+    if(beyond_flag = 1,1,0) as beyond_flag
+resident spm_beyond_temp;
+
+drop table spm_beyond_temp;
+
+//---------------------------------------------------------------------------------------
+spm_TT_state_to_state_temp:
+Noconcatenate
+load
+    buy_service_id,
+    Key_state_to_state,
+    buy_transit_time,
+    buy_end_zip_code
+
+resident buy_basic;
+
+left join(spm_TT_state_to_state_temp)
+load 
+    Key_state_to_state,
+    spm_state_to_state_TT,
+    1 as flag
+
+resident spm_state_to_state;
+
+left join(spm_TT_state_to_state_temp)
+load 
+    buy_end_zip_code,
+    beyond_flag
+
+resident spm_beyond;
+
+spm_TT_state_to_state:
+Noconcatenate
+load 
+    buy_service_id,
+    if(isnull(beyond_flag),if(buy_transit_time <= spm_state_to_state_TT,'Correct','Incorrect'),
+        if(buy_transit_time <= (spm_state_to_state_TT + 1),'Correct','Incorrect')) as spm_state_to_state_kpi
+
+resident spm_TT_state_to_state_temp
+where flag = 1;
+
+drop table spm_TT_state_to_state_temp;
+
+
+
+
+
+//-------------------------------------------------------------------------------
+
+spm_TT_city_to_city_temp:
+Noconcatenate
+load
+    buy_service_id,
+    key_city_to_city,
+    buy_transit_time,
+    buy_end_zip_code
+
+resident buy_basic;
+
+left join(spm_TT_city_to_city_temp)
+load 
+    key_city_to_city,
+    spm_city_to_city_TT,
+    1 as flag
+
+resident spm_city_to_city;
+
+
+left join(spm_TT_city_to_city_temp)
+load 
+    buy_end_zip_code,
+    beyond_flag
+
+resident spm_beyond;
+
+spm_TT_city_to_city:
+Noconcatenate
+load 
+    buy_service_id,
+    if(isnull(beyond_flag),if(buy_transit_time <= spm_city_to_city_TT,'Correct','Incorrect'),
+        if(buy_transit_time <= (spm_city_to_city_TT + 1),'Correct','Incorrect')) as spm_city_to_city_kpi
+
+resident spm_TT_city_to_city_temp
+where flag = 1;
+
+drop table spm_TT_city_to_city_temp;
+
+//-------------------------------------------------------------------------------
+
+spm_TT_country_to_country_temp:
+Noconcatenate
+load
+    buy_service_id,
+    key_country_to_country,
+    buy_transit_time,
+    buy_end_zip_code
+
+resident buy_basic;
+
+left join(spm_TT_country_to_country_temp)
+load 
+    key_country_to_country,
+    spm_country_to_country_TT,
+    1 as flag
+
+resident spm_country_to_country;
+
+
+left join(spm_TT_country_to_country_temp)
+load 
+    buy_end_zip_code,
+    beyond_flag
+
+resident spm_beyond;
+
+spm_TT_country_to_country:
+Noconcatenate
+load 
+    buy_service_id,
+    if(isnull(beyond_flag),if(buy_transit_time <= spm_country_to_country_TT,'Correct','Incorrect'),
+        if(buy_transit_time <= (spm_country_to_country_TT + 1),'Correct','Incorrect')) as spm_country_to_country_kpi
+
+resident spm_TT_country_to_country_temp
+where flag = 1;
+
+drop table spm_TT_country_to_country_temp;
+
+
+
+// Full KPI --------------------------------------------------------------------------------------------
+
+full_KPI_temp:
+noconcatenate
+load distinct
+    buy_service_id
+
+resident buy_basic;
+
+
+full_KPI_temp_1:
+noconcatenate
+load distinct
+    buy_service_id,
+    spm_state_to_state_kpi as spm_kpi_tt,
+    1 as tt_flag
+
+resident spm_TT_state_to_state;
+
+
+concatenate(full_KPI_temp_1)
+load distinct
+    buy_service_id,
+    spm_city_to_city_kpi as spm_kpi_tt,
+    1 as tt_flag
+
+resident spm_TT_city_to_city;
+
+
+concatenate(full_KPI_temp_1)
+load distinct
+    buy_service_id,
+    spm_country_to_country_kpi as spm_kpi_tt,
+    1 as tt_flag
+
+resident spm_TT_country_to_country;
+
+
+
+
+left join(full_KPI_temp)
+load distinct 
+    *
+resident full_KPI_temp_1;
+
+drop table full_KPI_temp_1;
+
+
+Store [full_KPI_temp] into [lib://Geo_AMS/Automation\BI\Plugins/Reports/SPM/SPM_global.csv](txt);
+
+Precall_spm:
+left join(full_KPI_temp)
+load distinct
+    buy_service_id,
+    if(precall_bracket = 'On Time','Correct',
+        if(precall_bracket = 'Late','Incorrect',
+            if(precall_bracket ='Early','Incorrect'))
+        ) as spm_kpi_precall,
+    precall_bracket as precall_bracket_spm,
+    1 as precall_flag
+
+resident Precall;
+
+
+full_KPI_temp_2:
+noconcatenate
+load distinct
+    buy_service_id,
+    if(precall_flag = 1,spm_kpi_precall, 
+        if(tt_flag = 1,spm_kpi_tt )) as spm_kpi,
+    spm_kpi_tt,
+    spm_kpi_precall,
+    precall_bracket_spm,
+    if(precall_flag = 1,1,
+        if(tt_flag = 1,0)) as tt_flag
+
+resident full_KPI_temp;
+
+drop table full_KPI_temp;
+
+
+CP_Netting_SPM:
+left join (full_KPI_temp_2)
+LOAD
+    sso_number as buy_service_id,
+    'Yes' as CP_SPM_Net
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/SQTSCS/CP Netting.xlsx]
+(ooxml, embedded labels, table is SPM);
+
+
+full_KPI:
+noconcatenate
+load distinct   
+    *   
+resident full_KPI_temp_2
+where len(trim(CP_SPM_Net)) = 0;
+
+drop table full_KPI_temp_2;

@@ -1,0 +1,40 @@
+Eorder_shipment_accesorials:
+left keep(sale_basic)
+LOAD
+    Kyndryl_Sale_Service_id as hu_reference,
+    "Kyndryl_Sale_Service_Special_Instructions_Unpacking_/_Decrating_(Remove_Debris)" as eorder_shipment_acc_unpacking,
+    //Kyndryl_Sale_Service_Special_Instructions_Additional_Security,
+    //"Kyndryl_Sale_Service_Special_Instructions_Skids_/_Pallets",
+    "Kyndryl_Sale_Service_Special_Instructions_Stretch_wrap_(per_roll)" as eorder_shipment_acc_shrink_wrapped,
+    //"Kyndryl_Sale_Service_Special_Instructions_Tape_(per_roll)",
+    //"Kyndryl_Sale_Service_Special_Instructions_Delivery/Dock_Site_restrictions",
+    //"Kyndryl_Sale_Service_Special_Instructions_Pick_Up/Dock_Site_restrictions",
+    //Kyndryl_Sale_Service_Special_Instructions_Type_of_Floor_Protection,
+    Kyndryl_Sale_Service_Special_Instructions_Pallet_Jack_required as eorder_shipment_acc_pallet_jack,
+    Kyndryl_Sale_Service_Special_Instructions_Liftgate_Truck_Required as eorder_shipment_acc_liftgate,
+    Kyndryl_Sale_Service_Special_Instructions_Needs_to_be_Palletized as eorder_shipment_acc_palletized_required,
+    "Kyndryl_Sale_Service_Special_Instructions_Packaging_/_Crating" as eorder_shipment_acc_packing,
+    //Kyndryl_Sale_Service_Special_Instructions_Site_Survey,
+    Kyndryl_Sale_Service_Special_Instructions_Pick_Up_Appointment as eorder_shipment_acc_pickup_appointment,
+    //"Kyndryl_Sale_Service_Special_Instructions_C-bins",
+    //"Kyndryl_Sale_Service_Special_Instructions_Bubble_Wrap_(per_100_ft_x_24_inches_wide_roll)",
+    Kyndryl_Sale_Service_Special_Instructions_Forklift_Required as eorder_shipment_acc_forklift,
+    Kyndryl_Sale_Service_Special_Instructions_PreCall as eorder_shipment_acc_precall,
+    //Kyndryl_Sale_Service_Special_Instructions_Rigging_Specialty_Service,
+    Kyndryl_Sale_Service_Special_Instructions_Union_Movers_Required as eorder_shipment_acc_union_movers,
+    //Kyndryl_Sale_Service_Special_Instructions_Power_Tailgate,
+    "Kyndryl_Sale_Service_Special_Instructions_Others*_(Misc_comments)" as eorder_shipment_comments,
+    //Kyndryl_Sale_Service_Special_Instructions_Pallets_Stackable,
+    Kyndryl_Sale_Service_Special_Instructions_Shipment_on_Casters as eorder_shipment_acc_casters,
+    Kyndryl_Sale_Service_Special_Instructions_Delivery_Appointment as eorder_shipment_acc_delivery_appointment,
+    Kyndryl_Sale_Service_Special_Instructions_Dolly_Required as eorder_shipment_acc_dolly,
+    Kyndryl_Sale_Service_Special_Instructions_Floor_Protection_required as eorder_shipment_acc_floor_protection,
+    Kyndryl_Sale_Service_Special_Instructions_Inside_Pickup_or_Delivery as eorder_shipment_acc_IPUorIDEL,
+    //Kyndryl_Sale_Service_Special_Instructions_Working_Crate_Freight_Available,
+    Kyndryl_Sale_Service_Special_Instructions_Climate_Control_Truck_Required as eorder_shipment_acc_climate_control_truck,
+    Kyndryl_Sale_Service_Special_Instructions_Labor as eorder_shipment_acc_labor,
+    Kyndryl_Sale_Service_Special_Instructions_Inside_Pickup as eorder_shipment_acc_IPU,
+    Kyndryl_Sale_Service_Special_Instructions_Inside_Delivery as eorder_shipment_acc_IDE
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_Kyndryl.qvd]
+(qvd);

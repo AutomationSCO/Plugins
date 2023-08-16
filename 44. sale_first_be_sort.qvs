@@ -1,0 +1,109 @@
+be_sort:
+left keep(sale_basic)
+load distinct 
+    sale_service_id
+
+resident sale_basic;
+
+//Booking
+left join(be_sort)
+load distinct
+    sale_service_id,
+    sale_event_actual_date as sale_event_booking_actual_date,
+    sale_event_estimated_date as sale_event_estimated_booking_date
+
+resident sale_first_be
+where match(sale_event_code,'6','E6','ACK','BF');
+
+//Pickup
+left join(be_sort)
+load distinct //Pickup
+    sale_service_id,
+    sale_event_actual_date as sale_event_pickup_actual_date,
+    sale_event_estimated_date as sale_event_pickup_estimated_date,
+    if(isnull(sale_event_actual_date),
+        if(sale_event_estimated_date >= '$(vToday)' ,1,0),
+            if(sale_event_estimated_date >= sale_event_actual_date ,1,0)) as planned_13_start_date_KPI
+
+resident sale_first_be
+where match(sale_event_code,'13','E13','DLP','AF');
+
+//Wheels Up
+left join(be_sort)
+load distinct
+    sale_service_id,
+    sale_event_actual_date as sale_event_wheels_up_actual_date,
+    sale_event_estimated_date as sale_event_wheels_up_estimated_date
+
+resident sale_first_be
+where match(sale_event_code,'A31','E31','B31','ADI','F');
+
+
+//Wheels Down
+left join(be_sort)
+load distinct
+    sale_service_id,
+    sale_event_actual_date as sale_event_wheels_down_actual_date,
+    sale_event_estimated_date as sale_event_estimated_wheels_down_date
+
+resident sale_first_be
+where match(sale_event_code,'B40','A40','E40','AAI','A');
+
+
+//Arrived at Crossdock
+left join(be_sort)
+load distinct
+    sale_service_id,
+    sale_event_actual_date as sale_event_arrived_crossdock_actual_date,
+    sale_event_estimated_date as sale_event_arrived_crossdock_estimated_date
+
+resident sale_first_be
+where match(sale_event_code,'A29','AAH','T');
+
+
+//Customs
+left join(be_sort)
+load distinct
+    sale_service_id,
+    sale_event_actual_date as sale_event_clearance_actual_date,
+    sale_event_estimated_date as sale_event_estimated_clearance_date
+
+resident sale_first_be
+where match(sale_event_code,'A12','CCL','CT');
+
+
+//Customs
+left join(be_sort)
+load distinct
+    sale_service_id,
+    sale_event_actual_date as sale_event_clearance_export_actual_date,
+    sale_event_estimated_date as sale_event_estimated_clearance_export_date
+
+resident sale_first_be
+where match(sale_event_code,'CU');
+
+
+//Departure from Crossdock
+left join(be_sort)
+load distinct
+    sale_service_id,
+    sale_event_actual_date as sale_event_departure_crossdock_actual_date,
+    sale_event_estimated_date as sale_event_departure_crossdock_delivery_date
+
+resident sale_first_be
+where match(sale_event_code,'B35','IRO','P');
+
+
+//Delivery
+left join(be_sort)
+load distinct
+    sale_service_id,
+    sale_event_actual_date as sale_event_delivery_actual_date,
+    sale_event_estimated_date as sale_event_estimated_delivery_date
+
+resident sale_first_be
+where match(sale_event_code,'A21','21','POD','D','E21');
+
+
+
+

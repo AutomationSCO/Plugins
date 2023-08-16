@@ -1,0 +1,513 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Finance/Dashboard/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Finance/Dashboard/1. Sale_Buy.qvs]);
+
+left join(sale_basic)
+load    
+    sale_service_id,
+    if(match(sale_country2country,'MX-US','MX-CA','US-CA','CA-US','CA-MX','US-MX'),'Crossborder',
+        if(IsGNumber = 'Vendor','Vendor',
+            if(sale_start_country = 'MX','IBM GUAD',
+                if(match(sale_start_zip_code,'NY-12601', 'NY-12603', 'NY-12602', 'TX-75019', 'NY-12477'),'IBM POK',
+                    if(GEODIS_ops_Team = 'Inter Team','Inter','Other'))))) as sale_finance_lane
+
+resident sale_basic;
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Finance Team.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/4. HU_Items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/19. eorder_shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/10. ST.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/13. finance_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/17. buy_finance_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/29. buy_additional_order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/18. invoice_line.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/15. Sale_FirstBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/16. Buy_LastBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/12. Specific_data_all_clients_buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/23. full_FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/24. full_ST.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/25. finance_reason_codes.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/26. sale_finance_service_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/27. buy_finance_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/28. finance_oms.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/30. sale_activity_report.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/31. buy_activity_report.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/40. rr_automation.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/48. ax_o2c_dimensions.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/53. eorder_shipment_kyndryl.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/54. buy_specific_info_ibm.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/63. AX_db.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/65. sale_last_be.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/74. sale_finance_invoice_tariff_items.qvs]);
+
+
+
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/4. amount.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/33. pending_to_invoice.qvs]);
+
+
+
+
+left join(buy_basic)
+load distinct
+    buy_service_id,
+    'Yes' as Z12_flag
+
+resident buy_last_be
+where buy_LastEvent_reason_code =  'Z12';
+
+//----------------------------------------------------------------------------
+manual_input_hazmat:
+left keep(sale_service_specific_data)
+LOAD
+    "IBM Code" as manual_input_hazmat_ibm_code,
+    "EDI Code" as manual_input_hazmat_edi_code,
+    "Geodis Product Code" as sale_geodis_product_code_ibm,
+    "Tariff item that applies" as manual_input_hazmat_tariff_item_applies
+FROM [lib://Geo_AMS/Automation/BI/Finance/Hazmat & Brand Traduction.xlsx]
+(ooxml, embedded labels, table is Hazmat);
+
+//----------------------------------------------------------------------------
+manual_input_brand:
+left keep(sale_service_specific_data)
+LOAD
+    "Ship From Code" as sale_ship_from_code,
+    BRAND as manual_input_brand
+FROM [lib://Geo_AMS/Automation/BI/Finance/Hazmat & Brand Traduction.xlsx]
+(ooxml, embedded labels, table is Brands);
+
+//----------------------------------------------------------------------------
+D_timeliness_flag_temp:
+noconcatenate
+load 
+    sale_service_id
+resident sale_basic;
+
+left join(D_timeliness_flag_temp)
+Load  distinct 
+    sale_service_id,
+    sale_lastbe_creation_datetime as sale_LastEvent_D_creation_date,
+    0 as d_last_timeliness_flag
+resident sale_last_be
+where sale_lastbe_reason_code = 'D'
+and sale_lastbe_timeliness = 'Incorrect';
+
+
+D_timeliness_flag_temp:
+noconcatenate
+load distinct 
+    sale_service_id,
+    if(d_last_timeliness_flag = 0,0,1) as d_last_timeliness_flag
+
+resident D_timeliness_flag_temp;
+
+drop table D_timeliness_flag_temp;
+
+
+//------------------------------------------------------------------------
+service_invoice_temp:
+noconcatenate
+load distinct
+    sale_full_invoice_number,
+    sale_full_invoice_amount_net,
+    sale_full_invoice_amount_gross,
+    sale_full_invoice_status,
+    sale_full_invoice_currency,
+    sale_full_customer_invoice_reference,
+    sale_full_invoice_type,
+    sale_full_invoice_nature,
+    date(sale_full_invoice_date,'DD/MM/YYYY') as sale_full_invoice_date,
+    date(sale_full_invoice_accountant_date,'DD/MM/YYYY') as sale_full_invoice_accountant_date,
+    date(sale_full_invoice_update_date,'DD/MM/YYYY') as sale_full_invoice_update_date,
+    sale_full_invoice_creation_user_id,
+    date(sale_full_invoice_creation_date,'DD/MM/YYYY') as sale_full_invoice_creation_date,
+    sale_full_invoice_update_user_id,
+    sale_full_invoive_internal_po_number,
+    sale_full_invoive_external_po_number,
+    sale_full_invoicing_profile_id,
+    sale_full_invoice_part_number,
+    sale_full_invoice_ax_key,
+    sale_full_invoice_eur_amount_gross,
+    sale_full_invoice_follow_up
+
+resident full_FA;
+
+left join(service_invoice_temp)
+load distinct 
+    sale_service_id,
+    sale_full_invoice_number
+
+resident sale_invoice;
+
+left join(service_invoice_temp)
+LOAD
+    sale_full_invoice_ax_key,
+    cp_pending_to_invoice
+    
+resident pending_to_invoice;
+
+left join(service_invoice_temp)
+load distinct
+    sale_service_id,
+    sale_executor_short_name,
+    sale_contractor_party,
+    sale_app_source as [App Source],
+    Client
+
+
+resident sale_basic;
+
+left join(service_invoice_temp)
+load distinct
+    sale_service_id,
+    sale_scac
+
+resident sale_service_specific_data;
+
+left join(service_invoice_temp)
+load distinct 
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(service_invoice_temp)
+load distinct 
+    buy_service_id,
+    buy_executor_short_name
+
+resident buy_basic;
+
+drop fields sale_service_id, buy_service_id from service_invoice_temp;
+
+service_invoice:
+noconcatenate
+load distinct
+    *
+resident service_invoice_temp
+where len(sale_full_invoice_number) > 0 ;
+
+
+drop table service_invoice_temp;
+
+Store service_invoice into [lib://Geo_AMS/Automation\BI\Reports/sale_invoice.csv](txt);
+
+drop table service_invoice;
+
+
+
+
+
+//------------------------------------------------------------------
+service_invoice_temp:
+noconcatenate
+load distinct
+    buy_service_id,
+    buy_full_invoice_number,
+    buy_full_invoice_amount_net,
+    buy_full_invoice_amount_gross,
+    buy_full_invoice_status,
+    buy_full_invoice_currency,
+    buy_full_invoice_supplier_invoice_reference,
+    buy_full_invoice_type,
+    buy_full_invoice_nature,
+    date(buy_full_invoice_date,'DD/MM/YYYY') as buy_full_invoice_date,
+    date(buy_full_invoice_accountant_date,'DD/MM/YYYY') as buy_full_invoice_accountant_date,
+    date(buy_full_invoice_update_date,'DD/MM/YYYY') as buy_full_invoice_update_date,
+    buy_full_invoice_creation_user_id,
+    date(buy_full_invoice_creation_date,'DD/MM/YYYY') as buy_full_invoice_creation_date,
+    buy_full_invoice_update_user_id,
+    buy_full_invoice_soldee,
+    buy_full_invoice_internal_po_number,
+    buy_full_invoice_external_po_number
+
+resident full_ST;
+
+
+left join(service_invoice_temp)
+load distinct
+    buy_service_id,
+    buy_executor_short_name,
+    buy_contractor_party
+
+
+
+resident buy_basic;
+
+
+left join(service_invoice_temp)
+load distinct 
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(service_invoice_temp)
+load distinct 
+    sale_service_id,
+    sale_contractor_party,
+    sale_app_source as [App Source]
+
+resident sale_basic;
+
+drop fields sale_service_id, buy_service_id from service_invoice_temp;
+
+service_invoice:
+noconcatenate
+load distinct
+    *
+resident service_invoice_temp
+where len(buy_full_invoice_number) > 0 ;
+
+drop table service_invoice_temp;
+
+Store service_invoice into [lib://Geo_AMS/Automation\BI\Reports/buy_invoice.csv](txt);
+
+drop table service_invoice;
+
+
+
+//----------------------------------------------------------------------------
+
+BV_Report:
+noconcatenate
+load distinct
+    sale_service_id as [CSO],
+    Client as [Client],
+    sale_contractor_party as [Customer],
+    hu_reference as [HU Reference],
+    sale_creation_date as [CSO Creation Date],
+    sale_start_date as [CSO Start Date],
+    sale_end_date as [CSO End Date],
+    sale_actual_start_date,
+    sale_actual_end_date,
+    sale_local_amount as [CSO Invoiced Sales],
+    sale_local_currency as [CSO Currency],
+    sale_start_geo as [Loading GEO],
+    sale_start_country as [Loading Country],
+    sale_start_state as [Loading State],
+    sale_start_city as [Loading City],
+    sale_service_start_address as [Loading address],
+    sale_service_start_name as [Loading Log Point],
+    sale_start_zip_code as [Loading Zip Code],
+    sale_end_geo as [Unloading GEO],
+    sale_end_country as [Unloading Country],
+    sale_end_state as [Unloading State],
+    sale_end_city as [Unloading City],
+    sale_service_end_address as [Unloading address],
+    sale_service_end_name as [Unloading Name],
+    sale_end_zip_code as [Unloading Zip Code],
+    sale_invoice_bursting as [CSO Bursting],
+    sale_service_activity_report as [CSO Activity Report],
+    sale_service_activity_report_status as [CSO Activity Report Status],
+    sale_executor_short_name as [Agency],
+    sale_service_execution_followup as [CSO Follow Up],
+    sale_weight_kg as [CSO Carried Weight],
+    sale_weight_lb as [CSO LB Weight],
+    sale_executed_SLA as [CSO Priority],
+    sale_incoterm as [CSO Incoterm],
+    buy_per_sale_qty as [Number Of Legs],
+    sale_service_loading_number as [Loading Number],
+    sale_app_source as [App Source],
+    sale_service_nature as [Service Nature],
+    sale_chargeable_weight as [CSO Chargeable Weight],
+    sale_service_customer_reference as [SHO Delivery Note Number],
+    sale_finance_lane as [Finance Lane]
+
+resident sale_basic;
+
+left join(BV_Report)
+load distinct 
+    sale_service_id as [CSO],
+    buy_service_id as [SSO],
+    sale_eur_amount as [CSO Amount Euro],
+    buy_eur_amount as [SSO Amount Euro],
+    sale_buy_id
+
+resident [sale-buy];
+
+left join(BV_Report)
+load distinct 
+    buy_service_id as [SSO],
+    buy_local_amount as [SSO Invoiced Sales],
+    buy_local_currency as [SSO Currency],
+    buy_invoice_bursting as [SSO Bursting],
+    buy_service_execution_followup as [SSO Follow Up],
+    buy_executed_SLA as [SSO Priority],
+    Carrier as [Carrier],
+    buy_actual_start_date as [SSO Start Date],
+    buy_actual_end_date as [SSO End Date],
+    Z12_flag as [SSO Z12],
+    sale_per_buy_qty as [Number Of Legs 2],
+    buy_start_name as [SSO Loading Point],
+    buy_start_addres as [SSO Loading Address],
+    buy_start_zip_code as [SSO Loading Zip Code],
+    buy_start_state as [SSO Loading State],
+    buy_start_country as [SSO Loading Country],
+    buy_start_city as [SSO Loading City],
+    buy_end_name as [SSO Unloading Point],
+    buy_end_addres as [SSO Unloading Address],
+    buy_end_zip_code as [SSO Unloading Zip Code],
+    buy_end_state as [SSO Unloading State],
+    buy_end_country as [SSO Unloading Country],
+    buy_end_city as [SSO Unloading City],
+    buy_service_nature as [SSO Service Nature],
+    buy_executor_short_name as [Carrier Contract]
+
+
+resident buy_basic
+;
+
+
+left join(BV_Report)
+load distinct
+    sale_service_id as [CSO],
+    sale_loading_zoning as [Sale Loading Zoning],
+    sale_unloading_zoning as [Sale Unloading Zoning],
+    sale_dispatch_advice as [CSO Dispatch Advice],
+    sale_delivery_note_number as [CSO Delivery Note Number],
+    sale_hawb as [Sale HAWB],
+    sale_id_hawb_qty as [CSO Consolidated],
+    sale_tracking_number as [Tracking Number],
+    sale_cuhawb as [CUHAWB],
+    sale_iot_flag as [IoT Flag],
+    sale_geodis_product_code_ibm as [Geodis Product Code],
+    sale_adhoc_reference as [CSO RR],
+    sale_scac as [SCAC],
+    sale_freight_charge_ddb as [CSO Freight Charge DDB],
+    //sale_carrier_weight as [CSO Chargeable Weight],
+    sale_requested_service as [CSO Requested Service],
+    sale_buyer_account_code as [Buyer Account Code],
+    sale_freight_method as [Sale Freight Method],
+    sale_ship_from_code as [Ship From],
+    sale_ship_to_code as [Ship To],
+    sale_hybrid_process_level as [CSO Hybrid Process Level],
+    sale_carrier_identifier as [Carrier identifier],
+    sale_order_type as [CSO Order Type],
+    sale_specific_info_service_type as [CSO Service Type],
+    sale_specific_info_weight as [Carrier Weight],
+    sale_miles as [Sales Miles]
+
+resident sale_service_specific_data;
+
+left join(BV_Report)
+load distinct
+    buy_service_id as [SSO],
+    buy_hawb as [Buy HAWB],
+    buy_id_hawb_qty as [SSO Consolidated],
+    buy_requested_service as [SSO Requested Service],
+    buy_adhoc_reference as [SSO RR],
+    buy_chargeable_weight_kg as [SSO Chargeable Weight],
+    buy_service_order_scenario as [SSO Order Scenario]
+
+resident buy_service_specific_data;
+
+left join(BV_Report)
+load distinct
+
+    sale_service_id as [CSO],
+    sale_invoice_number as [CSO Invoice],
+    sale_invoice_status as [CSO Invoice Status],
+    sale_invoice_follow_up as [CSO Status]
+
+resident FA;
+
+left join(BV_Report)
+load distinct
+
+    buy_service_id as [SSO],
+    buy_invoice_number as [SSO Invoice],
+    buy_invoice_status as [SSO Invoice Status],
+    buy_invoice_follow_up as [SSO Status]
+
+resident ST;
+
+left join(BV_Report)
+load distinct
+    sale_service_id as [CSO],
+    sale_vs_buy_eur_amount as [Margin]
+resident cp_amount;
+
+left join(BV_Report)
+load distinct
+    sale_buy_id,
+    o2c_finance_analyst,
+    p2p_finance_analyst
+
+resident finance_owners;
+
+
+left join(BV_Report)
+load distinct
+    sale_service_id as [CSO],
+    sale_finance_aging as [CSO Aging Criteria],
+    sale_validation_days as [CSO Validation Days],
+    sale_finance_on_time_kpi as [CSO Aging]
+    
+resident financial_specific_info;
+
+left join(BV_Report)
+load distinct
+    buy_service_id as [SSO],
+    buy_finance_aging as [SSO Aging Criteria],
+    buy_validation_days as [SSO Validation Days],
+    buy_finance_on_time_KPI as [SSO Aging]
+    
+resident buy_financial_specific_info;
+
+left join(BV_Report)
+load distinct
+    buy_service_id as [SSO],
+    buy_service_activity_report as [SSO Activity Report],
+    buy_service_activity_report_status as [SSO Activity Report Status]
+    
+resident buy_activity_report;
+
+left join(BV_Report)
+load distinct
+    buy_service_id as [SSO],
+
+    IBM_buy_unloading_zoning as [Buy Unloading Zoning],
+    IBM_buy_loading_zoning as [Buy Loading Zoning]
+    
+resident buy_ibm_specific_info;
+
+
+left join(BV_Report)
+LOAD
+    sale_ship_from_code as [Ship From],
+    manual_input_brand as [Brand]
+
+resident manual_input_brand;
+
+left join(BV_Report)
+LOAD
+    hu_reference as [HU Reference],
+    eorder_Kyndryl_Shipment_Information_LogisticsPONr as [Kyndryl PO]
+
+resident eorder_kyndryl_specific_info;
+
+left join(BV_Report)
+LOAD
+    hu_reference as [HU Reference],
+    eorder_shipment_creation_date as [Eorder Shipment Creation Date]
+
+resident Eorder_Shipment;
+
+left join(BV_Report)
+LOAD
+    manual_input_hazmat_ibm_code as [HAZMAT CODE],
+    sale_geodis_product_code_ibm as [Geodis Product Code]
+
+resident manual_input_hazmat;
+
+
+
+Store BV_Report into [lib://Geo_AMS/Automation\BI\Reports/BV_Report.csv](txt);
+
+drop table BV_Report;

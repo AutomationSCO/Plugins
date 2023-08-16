@@ -1,0 +1,27 @@
+
+[Dues_KPI]:
+left keep([sale-buy])
+LOAD distinct
+
+    sale_buy_id,
+    cp_due_pickup_bracket as historical_dues_cp_due_pickup_bracket,
+    cp_due_delivery_bracket as historical_dues_cp_due_delivery_bracket,
+    report_date as historical_dues_report_date,
+    PU_Analyst as historical_dues_PU_Analyst,
+    PU_Team_Responsible as historical_dues_PU_Team_Responsible,
+    Del_Analyst as historical_dues_Del_Analyst,
+    Del_Team_Responsible as historical_dues_Del_Team_Responsible
+    
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/historical_dues_4pl.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+
+
+[Historical_AWB]:
+left keep(sale_basic)
+LOAD Distinct 
+    sale_service_id,
+    cp_MissingAWB as historical_AWB_cp_MissingAWB,
+    cp_missing_awb_reportdate as historical_AWB_report_date
+
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/historical_hawb_4pl.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);

@@ -1,0 +1,37 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Finance/Historical/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Finance/Dashboard/1. Sale_Buy.qvs]);
+
+left join(sale_basic)
+load    
+    sale_service_id,
+    if(match(sale_country2country,'MX-US','MX-CA','US-CA','CA-US','CA-MX','US-MX'),'Crossborder',
+        if(IsGNumber = 'Vendor','Vendor',
+            if(sale_start_country = 'MX','IBM GUAD',
+                if(match(sale_start_zip_code,'NY-12601', 'NY-12603', 'NY-12602', 'TX-75019', 'NY-12477'),'IBM POK',
+                    if(GEODIS_ops_Team = 'Inter Team','Inter','Other'))))) as sale_finance_lane
+
+resident sale_basic;
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Finance Team.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/12. Specific_data_all_clients_buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/19. eorder_shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/10. ST.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/13. finance_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/17. buy_finance_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/29. buy_additional_order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/18. invoice_line.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/23. full_FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/24. full_ST.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/26. sale_finance_service_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/27. buy_finance_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/74. sale_finance_invoice_tariff_items.qvs]);
+
+
+
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/4. amount.qvs]);

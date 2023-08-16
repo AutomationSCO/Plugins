@@ -1,0 +1,55 @@
+// 19. Incorrect Service Level ---------------------------------------------------------------------------------------------------------------------------------
+[cp_incorrect_service_level_temp]:
+left keep(sale_basic)
+Load  distinct
+    sale_service_id,
+    sale_executed_SLA
+
+resident sale_basic
+where GEODIS_ops_Team = 'Inter Team'
+and not match(net_flag,1)
+and match(sale_ams_billing,'AMS Bill')
+and match(sale_service_execution_followup,'CD','CL')
+and sale_start_geo = 'AMS'
+and sale_creation_year >= 2022
+;
+
+
+left join(cp_incorrect_service_level_temp)
+load distinct
+    sale_service_id,
+    buy_service_id
+resident [sale-buy];
+
+left join(cp_incorrect_service_level_temp)
+load distinct
+    buy_service_id,
+    buy_executed_SLA
+resident buy_basic;
+
+
+
+left join(cp_incorrect_service_level_temp)
+LOAD
+    CSO as sale_service_id,
+    'Yes' as CP_SL_Net
+    
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'SL';
+
+
+[cp_incorrect_service_level]:
+noconcatenate
+load distinct
+    sale_service_id,
+    if(sale_executed_SLA = buy_executed_SLA,'Correct','Incorrect') as cp_incorrect_service_level
+
+resident cp_incorrect_service_level_temp
+where 
+len(trim(CP_SL_Net)) < 2 
+//and len(trim(sale_cmr_flag)) < 2
+;
+
+
+Drop table cp_incorrect_service_level_temp;

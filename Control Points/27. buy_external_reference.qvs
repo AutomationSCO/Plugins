@@ -1,0 +1,18 @@
+
+[cp_buy_external_reference]:
+LEFT Keep ([buy_basic])
+LOAD Distinct
+
+    buy_service_id,
+	'Incorrect' as cp_buy_external_reference
+
+
+resident buy_basic
+where buy_app_source = 'Zenith'
+and len(trim(buy_external_reference)) = 0
+
+or buy_app_source = 'MPO'
+and match(buy_service_execution_followup,'STARTED','FINISHED')
+and len(trim(buy_external_reference)) = 0
+and not match(buy_service_nature,'PLANIFICATION')
+;

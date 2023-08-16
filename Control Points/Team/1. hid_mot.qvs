@@ -1,0 +1,24 @@
+hid_mot_temp:
+load distinct 
+    sale_service_id
+
+resident sale_basic
+where Client = 'HID'; 
+
+
+left join(hid_mot_temp)
+load distinct
+    sale_service_id,
+    sale_service_HID_ModeOfTransport
+
+resident HID_specific_info;
+
+hid_mot:
+noconcatenate
+Load distinct
+    sale_service_id,
+    'Incorrect' as cp_hid_mot
+resident hid_mot_temp
+where len(trim(sale_service_HID_ModeOfTransport)) = 0;
+
+drop table hid_mot_temp;

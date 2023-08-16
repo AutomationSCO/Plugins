@@ -1,0 +1,25 @@
+eorder_ack_temp:
+noconcatenate
+load 
+
+    hu_reference,
+    eorder_shipment_creation_date
+
+resident Eorder_Shipment;
+
+left join(eorder_ack_temp)
+load 
+    hu_reference,
+    sale_creation_date
+resident sale_basic;
+
+eorder_ack:
+noconcatenate
+load
+
+    hu_reference,
+    if(networkdays(eorder_shipment_creation_date,sale_creation_date) <= 2, 'Correct','Incorrect') as kpi_eorder_ack
+resident eorder_ack_temp;
+
+drop table eorder_ack_temp;
+

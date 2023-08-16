@@ -1,0 +1,150 @@
+
+Be_link:
+LOAD
+    v_BEVENTCLE.BEVEID as BE_id,
+    v_BEVENTCLE.BECLEF as sale_service_id,
+    v_BEVENTCLE.BECLEF as buy_service_id
+FROM [lib://QVD Ops_Cognos/v_BEVENTCLE.qvd]
+(qvd);
+
+
+
+concatenate(Be_link)
+LOAD
+    v_HISTO_BEVENTCLE.BEVEID as BE_id,
+    v_HISTO_BEVENTCLE.BECLEF as sale_service_id,
+    v_HISTO_BEVENTCLE.BECLEF as buy_service_id
+FROM [lib://QVD Ops_Cognos/v_HISTO_BEVENTCLE.qvd]
+(qvd);
+
+
+
+
+[be_histo]:
+LOAD
+    v_BEVENT.BEVEID as BE_id,
+    v_BEVENT.MEVCOD as histo_be_code,
+    v_BEVENT.BEVCOM as histo_be_comment,
+    v_BEVENT.DATREE as histo_be_date,
+    v_BEVENT.USECRE as histo_be_creation_user,
+    v_BEVENT.DATCRE as histo_be_creation_date
+FROM [lib://QVD Ops_Cognos/v_BEVENT.qvd]
+(qvd)
+where match(v_BEVENT.MEVCOD,'AF','D','13','21','71');
+
+
+Concatenate(be_histo)
+LOAD
+    v_HISTO_BEVENT.BEVEID as BE_id,
+    v_HISTO_BEVENT.MEVCOD as histo_be_code,
+    v_HISTO_BEVENT.BEVCOM as histo_be_comment,
+    v_HISTO_BEVENT.DATREE as histo_be_date,
+    v_HISTO_BEVENT.USECRE as histo_be_creation_user,
+    v_HISTO_BEVENT.DATCRE as histo_be_creation_date
+  
+FROM [lib://QVD Ops_Cognos/v_HISTO_BEVENT.qvd]
+(qvd)
+where match(v_HISTO_BEVENT.MEVCOD,'AF','D','13','21','71');;
+
+
+sale_be_link_temp:
+left keep(sale_basic)
+Load 
+	BE_id as sale_BE_id,
+    sale_service_id
+	
+Resident Be_link
+where len(trim(sale_service_id)) > 2;
+
+
+
+sale_histo_be:
+left keep(sale_be_link_temp)
+Load 
+    BE_id as sale_BE_id,
+    histo_be_code as sale_histo_be_code,
+    histo_be_comment as sale_histo_be_comment,
+    histo_be_date as sale_histo_be_date,
+    histo_be_creation_user as sale_histo_be_creation_user,
+    histo_be_creation_date as sale_histo_be_creation_date,
+    if(histo_be_comment='/' and histo_be_creation_user='USEREAI','Mass Upload',
+    if(histo_be_creation_user='USEREAI','EDI','Manual')) as "sale_histo_event_type"
+	
+Resident be_histo;
+
+
+
+sale_be_link:
+left keep(sale_histo_be)
+Load 
+	sale_BE_id,
+    sale_service_id
+	
+Resident sale_be_link_temp
+where len(trim(sale_BE_id)) > 2;
+
+
+left join (sale_be_link)
+LOAD Distinct
+
+    sale_service_id,
+    count(sale_BE_id) as "sale_histo_be_qty"
+
+resident sale_be_link
+group by sale_service_id;
+
+
+
+
+buy_be_link_temp:
+left keep(buy_basic)
+Load 
+	BE_id as buy_BE_id,
+    buy_service_id
+	
+Resident Be_link
+where len(trim(buy_service_id)) > 2;
+
+
+
+buy_histo_be:
+left keep(buy_be_link_temp)
+Load 
+    BE_id as buy_BE_id,
+    histo_be_code as buy_histo_be_code,
+    histo_be_comment as buy_histo_be_comment,
+    histo_be_date as buy_histo_be_date,
+    histo_be_creation_user as buy_histo_be_creation_user,
+    histo_be_creation_date as buy_histo_be_creation_date,
+    year(histo_be_creation_date) &'-'& num(month(histo_be_creation_date),'00') as buy_histo_be_creation_yearmonth,
+    if(histo_be_comment='/' and histo_be_creation_user='USEREAI','Mass Upload',
+    if(histo_be_creation_user='USEREAI','EDI','Manual')) as "buy_histo_event_type"
+	
+Resident be_histo
+where len(histo_be_code) > 1;
+
+buy_be_link:
+left keep(buy_histo_be)
+Load 
+	buy_BE_id,
+    buy_service_id
+	
+Resident buy_be_link_temp
+where len(trim(buy_BE_id)) > 2;
+
+
+left join (buy_be_link)
+LOAD Distinct
+
+    buy_service_id,
+    count(buy_BE_id) as "buy_histo_be_qty"
+
+resident buy_be_link
+group by buy_service_id
+;
+
+
+drop table sale_be_link_temp;
+drop table buy_be_link_temp;
+drop table Be_link;
+drop table be_histo;

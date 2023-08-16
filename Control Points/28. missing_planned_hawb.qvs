@@ -1,0 +1,77 @@
+//3. cp_Missing AWB----------------------------------------------------------------------------------------------------
+[Control_Point_MissingAWB_temp]:
+LEFT Keep ([sale_basic])
+LOAD Distinct
+
+    sale_service_id,
+    sale_app_source
+
+
+resident sale_basic
+where not match(sale_service_short_name,'BROOKAY_US','BROOKAY_US/TR','BROOKLYN KAYAK U','IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP','IBM_MD_NB')
+//and match(sale_loading_geo,'AMS')
+and not match(net_flag,1)
+and match(sale_service_execution_followup,'APP','NAP')
+and sale_app_source = 'Zenith'
+
+or sale_app_source = 'MPO'
+and match(sale_service_execution_followup,'PLANNNED')
+and not match(sale_service_execution_followup,'SHIPMENT CANCELED'
+and Client <> 'BP'
+)
+
+
+;
+
+sale_service_specific_data:
+LEFT join([Control_Point_MissingAWB_temp])
+LOAD DISTINCT
+    sale_service_id,
+    sale_hawb
+
+resident sale_service_specific_data;
+
+left join(Control_Point_MissingAWB_temp)
+load distinct
+    sale_service_id,
+    buy_service_id,
+    sale_buy_id
+
+resident [sale-buy];
+
+
+CP_Netting_HAWB:
+left join (Control_Point_MissingAWB_temp)
+LOAD
+    CSO as sale_service_id,
+    'Yes' as CP_HAWB_Net
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'HAWB';
+
+
+Team:
+left join(Control_Point_MissingAWB_temp)
+load distinct 
+    sale_buy_id,
+    PU_Team_Responsible
+
+resident Owners;
+
+
+[cp_missing_planned_hawb]:
+noconcatenate
+Load distinct
+    sale_service_id,
+    if(CP_HAWB_Net = 'Yes','Correct','Incorrect') as cp_missing_planned_hawb,
+    CP_HAWB_Net
+
+resident [Control_Point_MissingAWB_temp]
+
+where len(trim(sale_hawb)) = 0
+
+or 
+match(sale_hawb,'-')
+
+;
+drop table Control_Point_MissingAWB_temp;

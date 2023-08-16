@@ -1,0 +1,47 @@
+[Eorder_Order_accesorials]: 
+left keep (Eorder_Order)
+LOAD distinct
+
+    sale_customer_order_systemid as eorder_order_systemid,
+    "IBM_co_4 Men Team Required" as eorder_order_acc_4_men_team,
+    "IBM_co_Climate control truck required" as eorder_order_acc_climate_control_truck,
+    "IBM_co_Delivery Appointment" as eorder_order_acc_delivery_appointment,
+    IBM_co_DockHighTruck as eorder_order_acc_dock_high_truck, //no existe nada
+    "IBM_co_Dolly Required" as eorder_order_acc_dolly,
+    "IBM_co_Export Clearance by Vendor" as eorder_order_acc_export_clearance_by_vendor,
+    "IBM_co_Floor protection required" as eorder_order_acc_floor_protection,
+    "IBM_co_ForkLift Required" as eorder_order_acc_forklift,
+    "IBM_co_Full truck load required" as eorder_order_acc_FTL,
+    "IBM_co_Government Security Clearance Required" as eorder_order_acc_government_clearance,
+    "IBM_co_Inside Delivery" as eorder_order_acc_IDL,
+    "IBM_co_Inside Pick up" as eorder_order_acc_IPU,
+    "IBM_co_Liftgate  truck required" as eorder_order_acc_liftgate,
+    "IBM_co_Packaging required" as eorder_order_acc_packaging,
+    "IBM_co_Needs to be palletized" as eorder_order_acc_palletized_required,
+    "IBM_co_Pallet Jack Required" as eorder_order_acc_pallet_jack,
+    "IBM_co_Pick-up appointment" as eorder_order_acc_pickup_appointment,
+    "IBM_co_Pre Call" as eorder_order_acc_precall,
+    "IBM_co_Security Required" as eorder_order_acc_security,
+    "IBM_co_Shipment on casters" as eorder_order_acc_casters,
+    "IBM_co_Shrink-wrapped required" as eorder_order_acc_shrink_wrapped,
+    "IBM_co_Special Packaging" as eorder_order_acc_special_packaging,
+    "IBM_co_Stair Carry Required" as eorder_order_acc_stair_carry,
+    "IBM_co_Union movers required" as eorder_order_acc_union_movers,
+    "IBM_co_UnPacking Required" as eorder_order_acc_unpacking,
+    "IBM_co_Bill Location Code" as eorder_order_bill_location_code,
+    "IBM_co_IBM Pay Location Code" as eorder_order_pay_location_code,
+    "IBM_co_IBM Mak Code or Commodity Code" as eorder_order_mak_code,
+    IBM_co_Labor as eorder_order_labor,
+    IBM_co_Division as eorder_order_division,
+    IBM_co_Department as eorder_order_department,
+    "IBM_co_Endicott Code" as eorder_order_endicott_code
+ 
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_CO_IBM.qvd] (qvd);
+
+left join(Eorder_Order_accesorials)
+load distinct 
+    eorder_order_systemid,
+    hu_reference
+resident Eorder_Order;
+
+drop field eorder_order_systemid from Eorder_Order;

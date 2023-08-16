@@ -1,0 +1,61 @@
+
+[buy_last_be]:
+Left Keep(buy_basic)
+LOAD
+    buy_service_id,
+    buy_LastEvent_code,
+    buy_LastEvent_reason_code,
+    buy_LastEvent_creation_datetime,
+    date(buy_LastEvent_creation_datetime) as buy_LastEvent_creation_date, 
+//    buy_event_creation_timezone as buy_event_creation_timezone,
+//    buy_event_creation_datetime_utc as buy_event_creation_datetime_utc,
+//    buy_event_creation_date_utc as buy_event_creation_date_utc,
+    "buy_LastEvent_actual_datetime " as buy_LastEvent_actual_datetime,
+    date("buy_LastEvent_actual_datetime ") as buy_LastEvent_actual_date,
+//    buy_event_actual_timezone as buy_event_actual_timezone,
+//    buy_event_actual_datetime_utc as buy_event_actual_datetime_utc,
+//    buy_event_actual_date_utc as buy_event_actual_date_utc,
+    "buy_LastEvent_country_zone_location " as buy_LastEvent_country_zone_location,
+    buy_LastEvent_creation_user_id,
+    buy_LastEvent_update_user_id
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_buy_LastBE.qvd]
+(qvd)where "buy_LastEvent_app_source " = 'Zenith'
+and match(buy_LastEvent_code,'AF','71','E84',6,21,13,35,1)
+
+;
+
+
+[mpo_buy_last_be]:
+left keep(buy_basic)
+LOAD
+    buy_service_id,
+    buy_LastEvent_code,
+    buy_LastEvent_reason_code,
+    buy_LastEvent_creation_datetime,
+    date(buy_LastEvent_creation_datetime - 0.333333333333333) as buy_LastEvent_creation_date, 
+//    buy_event_creation_timezone as buy_event_creation_timezone,
+//    buy_event_creation_datetime_utc as buy_event_creation_datetime_utc,
+//    buy_event_creation_date_utc as buy_event_creation_date_utc,
+    date("buy_LastEvent_actual_datetime "- 0.333333333333333,'DD/MM/YYYY hh:mm:ss') as buy_LastEvent_actual_datetime,
+    date("buy_LastEvent_actual_datetime " - 0.333333333333333) as buy_LastEvent_actual_date,
+//    buy_event_actual_timezone as buy_event_actual_timezone,
+//    buy_event_actual_datetime_utc as buy_event_actual_datetime_utc,
+//    buy_event_actual_date_utc as buy_event_actual_date_utc,
+    "buy_LastEvent_country_zone_location " as buy_LastEvent_country_zone_location,
+    buy_LastEvent_creation_user_id,
+    buy_LastEvent_update_user_id
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_buy_LastBE.qvd]
+(qvd)
+where "buy_LastEvent_app_source " = 'MPO'
+;
+
+[mpo_buy_last_be]:
+concatenate(buy_last_be)
+LOAD distinct 
+    *
+resident mpo_buy_last_be;
+
+drop table mpo_buy_last_be;
+

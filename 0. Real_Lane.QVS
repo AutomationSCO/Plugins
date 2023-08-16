@@ -1,0 +1,107 @@
+//Mk: all fields used for team and owner per order
+[Real_Lane]:
+NoConcatenate
+LOAD  DISTINCT
+
+
+    sale_service_id,
+    sale_start_country,
+    sale_service_end_name,
+    sale_country2country,
+    sale_city2city,
+    sale_start_zip_code,
+    sale_start_city,
+    sale_end_country,
+    sale_end_zip_code,
+    sale_end_city,
+    sale_contractor_party_Group_N1,
+    if(sale_start_country='MX',Left(sale_start_state,3),Left(sale_start_state,2)) as LoadingPrefix,
+    if (sale_end_country='GU','GU',if(sale_end_country='CA' or sale_start_country = 'CA','Canada',Left(sale_end_state,2))) as UnloadingPrefix,
+    sale_creation_date,
+    sale_creation_year,
+    sale_service_start_name,
+    sale_contractor_party,
+    sale_service_execution_followup,
+    sale_executed_SLA,
+    sale_latam_flag,
+    sale_service_start_address,
+    sale_geo_to_geo,
+    "Client",
+    IBM_HAWB as owner_IBM_HAWB,
+    sale_end_geo,
+    sale_start_geo,
+    hu_reference,
+    IsGNumber,
+    IBM_Transport_Mode,
+    sale_from_code,
+    sale_to_code,
+    ConsolidatedAWB,
+    GEODIS_ops_Team,
+    sale_caribbean_flag,
+    IBM_Standard_Carrier_Alpha_Code,
+    sale_service_short_name,
+    IBM_Order_Type,
+    if(sale_start_country = 'CA', 1,0) as CA_Lane
+    
+
+resident sale_basic;  
+
+//tabla de relacion a la buy
+[sale-buy]:
+LEFT join ([Real_Lane])
+LOAD DISTINCT
+    sale_service_id,
+    buy_service_id,
+    sale_buy_id as sale_buy_id_temp
+
+resident [sale-buy];
+
+
+//Carrier
+[Carrier]:
+Left join ([Real_Lane])
+LOAD 
+    buy_service_id,
+    buy_executor_short_name,
+    buy_executed_SLA,
+    Carrier,
+    buy_service_short_name
+
+resident buy_basic;
+
+left join(Real_Lane)
+load distinct
+    sale_service_id,
+    1 as ta_log_flag
+
+resident Real_Lane
+where Carrier = 'TA_LOG_US';
+
+
+[PU Owner table]:
+Left join ([Real_Lane])
+LOAD
+    Prefix as LoadingPrefix,
+    Owner as PlanningOwner
+FROM [lib://Geo_AMS/LogisticsAnalyst/MiniCompleteness/Owner.xlsx]
+(ooxml, embedded labels, table is [PU owner]);
+
+[Del Owner table]:
+Left join ([Real_Lane])
+LOAD
+    Prefix as UnloadingPrefix,
+    Owner as ExecutionOwner
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/MiniCompleteness/Owner.xlsx]
+(ooxml, embedded labels, table is [Del Owner]);
+
+[Del Owner table]:
+Left join ([Real_Lane])
+LOAD
+    Prefix as LoadingPrefix,
+    Owner as ExecutionOwner_loading
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/MiniCompleteness/Owner.xlsx]
+(ooxml, embedded labels, table is [Del Owner]);
+
+

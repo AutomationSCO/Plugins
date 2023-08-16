@@ -1,0 +1,96 @@
+ST_Temp:
+noconcatenate
+load distinct
+    buy_service_id
+resident buy_basic;
+
+buy_activity_report:
+left join(ST_Temp)
+LOAD
+    buy_service_system_id as buy_service_id,
+    'VNL' as buy_finance_vnl_flag
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_Service.qvd]
+(qvd)
+where buy_service_activity_report_status = 'Validated Not Payable';
+
+left join(ST_Temp)
+LOAD DISTINCT
+    buy_service_id,
+    buy_invoice_number_line as buy_invoice_number
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_InvoiceLines_Service.qvd] (qvd)
+WHERE
+    Len(Trim(buy_invoice_number_line))>4;
+
+
+left join(ST_Temp)
+LOAD DISTINCT
+    buy_invoice_number,
+    buy_invoice_status,
+    buy_invoice_accountant_date,
+    buy_invoice_date,
+    buy_invoice_creation_date,
+    buy_invoice_update_date,
+    buy_invoice_amount_ati as buy_invoice_amount_net,
+    buy_invoice_amount_et as buy_invoice_amount_gross,
+    buy_invoice_currency,
+    buy_invoice_type,
+    buy_invoice_nature,
+    buy_invoice_creation_user_id,
+    buy_invoice_update_user_id,
+    buy_invoice_supplier_invoice_reference,
+    buy_invoice_soldee
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_Invoice.qvd] (qvd)
+WHERE 
+	buy_invoice_nature='F' 
+    AND buy_invoice_type='1'
+    or 
+    app_source_buy_Invoice = 'MPO'
+    //and not match(buy_invoice_type,'PRE_INVOICE')
+;
+
+left join(ST_Temp)
+load distinct
+    buy_service_id,
+    buy_service_activity_report_status
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_Service.qvd]
+(qvd);
+
+left join(ST_Temp)
+LOAD
+    "Order" as buy_service_id,
+    if(Status='INVO','1. Invoiced',
+        if(Status='NINVO','2. Not Invoiced',
+            if(Status='NP','3. Not payable'))) as Status
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Finance_Exceptions.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq)
+;
+
+ST:
+noconcatenate
+load distinct
+    *,
+    if(len(Status) <> 0 , Status,
+    if(buy_finance_vnl_flag = 'VNL'
+    or len(buy_service_id) = 0
+    or match(buy_service_activity_report_status,'Validated Not Payable','Archived')
+    , '3. Not payable',
+
+    if(match(buy_invoice_status, 'EDT','MATCHED_MAN','SENT_TO_SUPPLIER')
+    or buy_invoice_soldee = 1
+    ,'1. Invoiced',
+
+
+    if(isnull(buy_invoice_status),'2. Not Invoiced',
+        if(match(buy_invoice_status,'BRO','VAL'),'2. Not Invoiced','2. Not Invoiced'
+            ))))) as buy_invoice_follow_up
+
+resident ST_Temp
+where len(buy_invoice_status) <> 0 
+or len(buy_invoice_number) = 0
+;
+
+drop table ST_Temp;
+ 
+drop fields buy_service_activity_report_status from ST;

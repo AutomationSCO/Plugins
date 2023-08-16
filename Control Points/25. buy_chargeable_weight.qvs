@@ -1,0 +1,23 @@
+solidigm_chargeable_weight_temp:
+load distinct 
+    buy_service_id
+
+resident buy_basic; 
+
+
+left join(solidigm_chargeable_weight_temp)
+load distinct
+    buy_service_id,
+    SOLIDIGM_buy_service_carrierConfirmedWeight
+
+resident solidigm_buy_specific_ifo;
+
+[solidigm_chargeable_weight]:
+noconcatenate
+Load distinct
+    buy_service_id,
+    if(len(trim(SOLIDIGM_buy_service_carrierConfirmedWeight)) = 0 or SOLIDIGM_buy_service_carrierConfirmedWeight = 0,'Incorrect','Correct') as cp_missing_buy_ConfirmedWeight
+
+resident solidigm_chargeable_weight_temp;
+
+drop table solidigm_chargeable_weight_temp;

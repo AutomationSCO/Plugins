@@ -1,0 +1,78 @@
+
+
+[Eorder_Order_temp]: 
+left keep (Eorder_Shipment)
+LOAD distinct
+    //if(sale_customer_order_business_scope_path = 'GEODIS.Keiser',sale_customer_order_receiver_reference, sale_customer_order_external_id) as hu_reference,
+
+    if(sale_customer_order_business_scope_path = 'GEODIS.SOLIDIGM',sale_customer_order_external_id) as eorder_order_to_shipment_key,
+    sale_customer_order_systemid as eorder_order_systemid,
+    floor(sale_customer_order_pickup_datetime_after) as eorder_order_requested_start_date_after,
+    floor(sale_customer_order_pickup_datetime_before) as eorder_order_requested_start_date_before,
+    date(sale_customer_order_delivery_datetime_after) as 
+    sale_customer_order_creation_date as eorder_order_creation_date,
+    date(sale_customer_order_update_datetime) as eorder_order_customer_order_update_date,
+    sale_customer_order_business_scope_path as eorder_order_client_path,
+    sale_customer_order_external_id as eorder_order_external_id,
+    sale_customer_order_shipper_reference as eorder_order_shipper_reference,
+    sale_customer_order_receiver_reference as eorder_order_receiver_reference,
+    sale_customer_order_creation_user_name & ' ' & sale_customer_order_creation_user_last_name as eorder_order_creation_user,
+    sale_customer_order_creation_user_phone_number as eorder_order_phone_name,
+    sale_customer_order_buyer_phone as eorder_order_buyer_phone,
+    sale_customer_order_buyer_name as eorder_order_buyer_name,
+    sale_customer_order_seller_phone as eorder_order_seller_phone,
+    sale_customer_order_seller_contact_name as eorder_order_seller_contact_name,
+    if(isnull(sale_customer_order_status_name), 'Blank', sale_customer_order_status_name) as eorder_order__status_name,
+    sale_customer_order_ship_from_name as eorder_order_ship_from_name,
+    sale_customer_order_ship_from_city as eorder_order_ship_from_city,
+    sale_customer_order_ship_from_country_name as eorder_order_ship_from_country,
+    sale_customer_order_ship_to_name as eorder_order_ship_to_name,
+    sale_customer_order_ship_to_city as eorder_order_ship_to_city,
+    sale_customer_order_ship_to_country_name as eorder_order_ship_to_country,
+    date(sale_customer_order_pickup_datetime_before) as eorder_order_pickup_date
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_CO.qvd]
+(qvd)
+WHERE app_source = 'eOrder';
+
+
+left join(Eorder_Order_temp)
+load
+    cso_number as eorder_order_to_shipment_key,
+    'Out' as exclude_data_model
+    
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/SQTSCS/CP Netting.xlsx]
+(ooxml, embedded labels, table is [Exclude Data Model]);
+
+Eorder_Order:
+noconcatenate
+Load  distinct
+    *   
+resident Eorder_Order_temp
+where len(exclude_data_model) = 0 ;
+
+drop table Eorder_Order_temp;
+
+drop field exclude_data_model from Eorder_Order_temp;
+
+[Eorder_OrderLine]: 
+left keep (Eorder_Order)
+LOAD Distinct
+
+    sale_customer_order_systemid as eorder_order_systemid,
+    sale_col_external_id as eorder_orderline_id,
+    sale_col_product_description as eorder_orderline_product_description,
+    sale_col_product_name as eorder_orderline_product_name,
+    sale_col_product_weight_unit as eorder_orderline_product_weight_unit,
+    sale_col_product_length as eorder_orderline_product_length,
+    sale_col_product_height as eorder_orderline_product_height,
+    sale_col_product_width as eorder_orderline_product_width,
+    sale_col_unit_type as eorder_orderline_type,
+    sale_col_requested_quantity as eorder_orderline_requested_quantity,
+    sale_col_vendor_part_number as eorder_orderline_vendor_part_number
+    
+    
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_COL.qvd]
+(qvd)
+WHERE app_source = 'eOrder' 

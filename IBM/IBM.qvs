@@ -1,0 +1,30 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/IBM/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/4. HU_Items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/54. buy_specific_info_ibm.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/55. sale_milestones.qvs]) 
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/56. buy_milestones.qvs]) 
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/70. iot.qvs]);
+
+
+
+
+cp_dynamic:
+noconcatenate
+load 
+buy_itinerary_id,
+if(buy_itineratyMilestone ='CHARGEMENT'  and buy_itineratyReference ='A'
+or buy_itineratyMilestone ='EMBARQUEME'  and buy_itineratyReference ='B'
+or buy_itineratyMilestone ='DECHARGEME'  and buy_itineratyReference ='B'
+or buy_itineratyMilestone ='DEBARQUEME'  and buy_itineratyReference ='C'
+or buy_itineratyMilestone ='EMBARQUEME'  and buy_itineratyReference ='D'
+or buy_itineratyMilestone ='DECHARGEME'  and buy_itineratyReference ='D'
+or buy_itineratyMilestone ='DEBARQUEME'  and buy_itineratyReference ='E'
+or buy_itineratyMilestone ='EMBARQUEME'  and buy_itineratyReference ='F'
+or buy_itineratyMilestone ='DECHARGEME'  and buy_itineratyReference ='F'
+
+,'Correct','Incorrect') as cp_dynamic_intinerary
+
+resident buy_itinerary;

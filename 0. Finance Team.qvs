@@ -1,0 +1,93 @@
+//Teams and Analysts for finance
+Team:
+noconcatenate
+Load distinct 
+    sale_service_id,
+    if(GEODIS_ops_Team = 'Inter Team' and Client = 'IBM', 'Inter Team',
+        if(GEODIS_ops_Team = 'Intra Team' and Client = 'IBM', 'Intra Team', 'New Co')) as finance_team_responsible,
+        sale_executor_short_name,
+        sale_contractor_party,
+        sale_service_nature,
+        GEODIS_ops_Team,
+        GEODIS_finance_Team,
+        sale_service_short_name,
+        buy_per_sale_qty
+
+resident sale_basic;
+
+left join(Team)
+load distinct 
+    sale_service_id,
+    buy_service_id,
+    sale_buy_id
+
+resident [sale-buy];
+
+
+left join(Team)
+load distinct 
+    buy_service_id,
+    buy_executor_short_name
+
+resident buy_basic;
+
+
+finance_owner_temp:
+noconcatenate
+load distinct 
+    sale_buy_id,
+    finance_team_responsible,
+    sale_executor_short_name & sale_contractor_party & sale_service_short_name & buy_executor_short_name  & GEODIS_finance_Team as finance_owner_link,
+    buy_executor_short_name,
+    sale_executor_short_name,
+    sale_service_nature,
+    sale_contractor_party,
+    buy_per_sale_qty
+
+resident Team;
+
+drop table Team;
+
+//Julias Input
+left join(finance_owner_temp)
+LOAD
+    Agency & Customer & sale_service_short_name & Carrier  & GEODIS_finance_Team as finance_owner_link,
+    o2c_finance_analyst,
+    p2p_finance_analyst
+FROM [lib://Geo_AMS/Automation/BI/Finance/Specialist_BV_Dashboard.xlsx]
+(ooxml, embedded labels, table is Hoja3);
+//exit script;
+finance_owners:
+noconcatenate
+load distinct
+    sale_buy_id,
+    finance_team_responsible,
+    finance_owner_link,
+    if(not match(buy_per_sale_qty,1,0) and finance_team_responsible = 'Inter Team' and wildmatch(buy_executor_short_name,'*CRST*'),'Aldo Mosqueda',
+        if(not match(buy_per_sale_qty,1,0) and finance_team_responsible = 'Intra Team' and match(buy_executor_short_name,'CLANCYUSMD','GFFBROKERG','MACH1_US','MOHAWK_US','TAZMAN_US'),'Elizabeth Chavez',
+            if(not match(buy_per_sale_qty,1,0) and finance_team_responsible = 'Inter Team' and match(buy_executor_short_name,'BTX_US','CLANCYUSMD','FRFORCE_US','GEOTRS_US','GEOWILUSMD','MAGELLANMD','MCCG_US_MD','STI_US_MD'),'Francisco Franco',
+                if(not match(buy_per_sale_qty,1,0) and finance_team_responsible = 'Inter Team' and match(buy_executor_short_name,'GEOWILMXMD'),'Isaac Vargas',
+                    if(not match(buy_per_sale_qty,1,0) and finance_team_responsible = 'Intra Team' and match(buy_executor_short_name,'ALLCARUSMD','FEDEXCUSMD','FEDEXUSMD','LYKES_USMD'),'Karen Gonzalez',
+                        if(not match(buy_per_sale_qty,1,0) and finance_team_responsible = 'Inter Team' and match(buy_executor_short_name,'AIT_MD_US'),'Obed Gallegos',
+                            if(not match(buy_per_sale_qty,1,0) and finance_team_responsible = 'Intra Team' and match(buy_executor_short_name,'AIT_MD_US','FRFORCE_US'),'Rafael Mendez',
+                                if(not match(buy_per_sale_qty,1,0) and finance_team_responsible = 'Intra Team' and match(buy_executor_short_name,'ATLASVNMD','BTX_US','CRST_US','GEOTRS_US','KIRSCH_US','MAGELLANMD','MCCG_US_MD','STI_US_MD'),'Ximena Flores',
+
+    if(finance_team_responsible = 'Inter Team' and wildmatch(buy_executor_short_name,'*GONT*') or sale_contractor_party = 'KSM_MX','Ramiro Alvarez',
+        if(sale_contractor_party = 'EGYM_US','Metzeri Montes',
+            if(sale_contractor_party = 'GEOINTERFR','Ramiro',
+
+
+    o2c_finance_analyst ))))))))))) as o2c_finance_analyst,
+
+        if(finance_team_responsible = 'Inter Team' and wildmatch(buy_executor_short_name,'*GONT*') or sale_contractor_party = 'KSM_MX','Ramiro Alvarez',
+            if(sale_contractor_party = 'EGYM_US','Metzeri Montes',
+                if(sale_contractor_party = 'GEOINTERFR','Ramiro Alvarez',
+
+
+
+    p2p_finance_analyst ))) as p2p_finance_analyst
+    
+resident finance_owner_temp;
+
+drop table finance_owner_temp;
+    

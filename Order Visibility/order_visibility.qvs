@@ -1,0 +1,32 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0.1 Main geo_bi.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Finance Team.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/4. HU_Items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/19. eorder_shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/20. eorder_order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/26. sale_finance_service_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/36. eorder_order_accesoriales.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/43. eorder_shipment_accesorials.qvs]);
+
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/1. pickup appointment order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/2. insidepickup order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/3. insidedelivery order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/4. delivery appointment order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/5. packaging order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/6. unpackaging order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/7. shrink wrapped order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/8. labor order.qvs]);
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/9. pickup appointment shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/10. insidepickup shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/11. delivery appointment shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/12. unpacking shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/13. shrink wrapped shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/14. packing shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/15. labor shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Accesorials/16. insidedelivery shipment.qvs]);

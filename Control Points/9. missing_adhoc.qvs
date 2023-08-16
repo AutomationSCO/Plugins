@@ -1,0 +1,43 @@
+[cp_missing_adhoc_temp]:
+LEFT Keep ([sale_basic])
+LOAD Distinct
+
+    sale_service_id,
+    Client
+
+
+resident sale_basic
+where not match(sale_service_short_name,'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP')
+and sale_creation_year >= '2021'
+and Client = 'ALIGN'
+and not match(sale_service_short_name,'IBM_MD_NB')
+and not match(net_flag,1)
+and not match(sale_service_execution_followup,'APP','NAP','SHIPMENT CANCELED')
+and GEODIS_ops_Team = 'Inter Team'
+or 
+Client = 'Kyndryl'
+and sale_country2country = 'CA-CA'
+
+;
+
+left join(cp_missing_adhoc_temp)
+load distinct
+    sale_service_id,
+    sale_adhoc_reference,
+    sale_scac
+resident sale_service_specific_data;
+
+cp_missing_adhoc:
+noconcatenate
+load distinct
+    sale_service_id,
+    'Incorrect' as cp_missing_adhoc
+resident cp_missing_adhoc_temp
+where 
+len(trim(sale_adhoc_reference)) = 0
+and Client = 'Kyndryl'
+and sale_scac = 'GF06'
+
+;
+
+drop table cp_missing_adhoc_temp;

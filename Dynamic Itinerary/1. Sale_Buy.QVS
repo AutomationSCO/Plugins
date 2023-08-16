@@ -1,0 +1,876 @@
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale.qvs]) 
+
+
+//Geografia origen
+[geo_origin_sale]:
+left join ([sale_basic_temp_1])
+LOAD
+    country as sale_start_country,
+    Geo_Code as sale_start_geo
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_REF_country.qvd]
+(qvd);
+
+
+//Geofrafia destino
+[geo_destination_sale]:
+left join ([sale_basic_temp_1])
+LOAD
+    country as sale_end_country,
+    Geo_Code as sale_end_geo
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_REF_country.qvd]
+(qvd) ;
+
+[sale_basic_temp]:
+noconcatenate
+LOAD Distinct
+*,
+    
+    //Dates
+    //Creation
+    year(sale_creation_date) &'-'& num(month(sale_creation_date),'00') as sale_creation_yearmonth,
+    year(sale_creation_date) &'-'& num(Week(sale_creation_date,0,0),'00') as sale_creation_yearweek,
+    num(Week(sale_creation_date,0,0),'00') as sale_creation_week,
+    num(month(sale_creation_date),'00') as sale_creation_month,
+    year(sale_creation_date) as sale_creation_year,
+    
+    //Start
+    if(sale_service_execution_followup='APP',sale_planned_start_date,sale_actual_start_date) as sale_start_date,
+    num(month(sale_actual_start_date)) as sale_actual_start_month,
+    num(week(sale_actual_start_date,0,0),'00') as sale_actual_start_week,
+    year(sale_actual_start_date) as sale_actual_start_year,
+        year(sale_actual_start_date) &'-'& num(week(sale_actual_start_date,0,0),'00') as sale_actual_start_yearweek,
+    year(sale_actual_start_date) &'-'& num(month(sale_actual_start_date),'00') as sale_actual_start_yearmonth,
+    
+    
+    //End
+    
+   
+	if(sale_service_execution_followup<>'CL',sale_planned_end_date,sale_actual_end_date) as sale_end_date,
+    num(week(sale_actual_end_date,0,0),'00') as sale_actual_end_week,
+    num(month(sale_actual_end_date)) as sale_actual_end_month,
+    year(sale_actual_end_date) as sale_actual_end_year,
+    year(sale_actual_end_date) &'-'& num(month(sale_actual_end_date),'00') as sale_actual_end_yearmonth,
+    year(sale_actual_end_date) &'-'& num(week(sale_actual_end_date,0,0),'00') as sale_actual_end_yearweek,
+    year(sale_actual_end_date) & '-Q' &  ceil(month(sale_actual_end_date)/3) as sale_actual_end_quarter,
+    
+    year(sale_planned_end_date) & '-' & num(month(sale_planned_end_date),'00') as sale_planned_end_yearmonth,
+    if(match(sale_service_execution_followup,'APP','STARTED'),NetWorkDays(sale_planned_start_date,'$(vToday)')- 1,'') as sale_planned_pick_up_aging,
+
+
+    
+
+
+    
+    //Control Points
+    if(('$(vToday)' - sale_creation_date) > 4 and sale_service_execution_followup = 'APP',1) as cp_late_creation_pickup,
+    if(networkdays(sale_creation_date,'$(vToday)') > 13 and sale_service_execution_followup = 'CD',1) as cp_late_creation_delivery,
+    if(sale_service_execution_followup = 'CD',networkdays(sale_creation_date,'$(vToday)')) as cp_late_creation_delivery_aging,
+    if(match(sale_service_execution_followup,'APP','STARTED'),
+        if(match(NetWorkDays(sale_requested_start_date,'$(vToday)')- 1,'',0,-1),'Incorrect'))  as cp_late_request_pickup,
+    if(match(sale_service_execution_followup,'CD','APP','STARTED','PLANNED'),
+        if(match(NetWorkDays(sale_requested_end_date,'$(vToday)')- 1,'',0,-1),'Incorrect'))  as cp_late_request_delivery,
+
+    
+    
+    
+    //Transit Times
+	if(isnull((sale_planned_end_date - sale_planned_start_date)),'Not yet calculated',(sale_planned_end_date - sale_planned_start_date)) as sale_gross_planned_transit_time,
+	if(networkdays(sale_requested_start_date,sale_requested_end_date)-1 <0,0,networkdays(sale_requested_start_date,sale_requested_end_date)) as sale_requested_transit_time,
+	if(isnull((sale_planned_end_date - sale_planned_start_date)),'Not yet calculated',networkdays(sale_planned_start_date,sale_planned_end_date)-1) as sale_planned_transit_time,
+    
+    networkdays(sale_actual_start_date,sale_actual_end_date) as sale_pickup_difference,
+    if((NetWorkDays((sale_actual_start_date),(sale_actual_end_date))-1) < 0,0,(NetWorkDays((sale_actual_start_date),(sale_actual_end_date))-1)) as sale_transit_time,
+    if(isnull(sale_actual_start_date),'On Going',sale_actual_end_date - sale_actual_start_date) as sale_gross_transit_time,
+    if(isnull(sale_actual_end_date),NetWorkDays(sale_actual_start_date,'$(vToday)')-1) as sale_current_transit_time,
+        if((NetWorkDays((sale_creation_date),(sale_actual_end_date))-1) < 0,0,(NetWorkDays((sale_creation_date),(sale_actual_end_date))-1)) as sale_order_life,
+
+
+	//Countrys
+    sale_start_state&sale_end_state as sale_from_to_state,
+    sale_start_city &'-' & sale_end_city as sale_city2city,
+    
+    sale_start_city &','&sale_start_country as sale_start_city_country,
+    sale_end_city &','&sale_end_country as sale_end_city_country,
+    if(sale_start_country = sale_end_country,'International','Domestic') as sale_international_domestic_flag,
+    sale_start_geo & '-' & sale_end_geo as sale_geo_to_geo,
+
+    if(match((sale_end_geo & sale_start_geo),'APACAPAC','APACEMEA','EMEAEMEA','EMEAAPAC') and Match(sale_contractor_party,'ALIGN_US'),0,1) as Align_scope_flag,
+    
+    //KPIs
+    if(sale_requested_start_date >= '$(vTodayAMS)',1,0) as kpi_requested_today_on_time_pickup,
+    if(sale_requested_end_date >= '$(vTodayAMS)',1,0) as kpi_requested_today_on_time_delivery,
+    if(sale_requested_end_date >= sale_actual_end_date,1,0) as kpi_request_on_time_delivery,
+    if((networkdays(sale_requested_end_date_after,sale_actual_end_date) - 1) = '-1','0',
+        (networkdays(sale_requested_end_date_after,sale_actual_end_date) - 1)) as kpi_requested_days_delivery,
+    if(sale_requested_start_date_after >= sale_planned_start_date,1,0) as kpi_planned_request_on_time_pickup,
+    if(sale_requested_start_date >= sale_actual_start_date,1,0) as kpi_request_on_time_pickup,
+    if((networkdays(sale_requested_start_date,sale_actual_start_date) - 1) = '-1','0',
+        (networkdays(sale_requested_start_date,sale_actual_start_date) - 1)) as kpi_requested_days_pickup, 
+    if(sale_requested_end_date_after >= sale_planned_end_date,1,0) as kpi_planned_request_on_time_delivery,
+    if(sale_requested_start_date >= sale_actual_start_date,1,0) as kpi_request_time_on_time_pickup,
+    if(sale_requested_end_date >= sale_actual_end_date,1,0) as kpi_request_time_on_time_delivery,
+    
+    if(networkdays(sale_requested_end_date,sale_planned_end_date)-1 <0,0,networkdays(sale_requested_end_date,sale_planned_end_date)) as sale_planned_end_vs_requested_end, 
+        if(sale_requested_end_date_after < '$(vToday)',
+        -(networkdays(sale_requested_end_date_after,'$(vToday)') - 1),
+            (networkdays('$(vToday)',sale_requested_end_date_after)-1))
+        as kpi_requested_today_days_delivery,
+
+   
+    networkdays('$(vToday)',sale_service_end_date)-1 as kpi_planned_today_delivery_aging,
+    
+    if(networkdays('$(vToday)',sale_service_end_date)-1 < 0,'Due',
+        if(networkdays('$(vToday)',sale_service_end_date)-1 =0, 'Today',
+            if(networkdays('$(vToday)',sale_service_end_date)-1 = 1, 'Tomorrow',
+                if(networkdays('$(vToday)',sale_service_end_date)-1 > 2, '2+ Days'))))
+        as kpi_planned_today_delivery_bracket,
+        
+	 if(sale_requested_start_date_after < '$(vToday)',
+        -(networkdays(sale_requested_start_date_after,'$(vToday)') - 1),
+            (networkdays('$(vToday)',sale_requested_start_date_after)-1))
+        as kpi_requested_today_days_pickup,
+        
+        
+   //Flags
+
+    if(match(sale_executor_short_name,'SMXKEY','SUSKEY','SCAKEY','SARKEY','SBRKEY','SCOKEY','SCLKEY',
+    'SECKEY','SUYKEY'),'AMS Bill') as sale_ams_billing,
+    if(sale_service_nature = 'TAIR','Air', if(sale_service_nature = 'TFTL', 'Ground',if(sale_service_nature = 'TFCL', 'Ocean',sale_service_nature))) as sale_MOT,
+    if(sale_service_short_name='IBM_MD_US/GSP',1,0) as sale_GSP_Flag,
+    if(Match(sale_executor_short_name,'SARKEY','SBRKEY','SCAKEY','SCLKEY','SCOKEY','SMXKEY','SPEKEY','SUSKEY','SVNKEY'),'AMS','Others') as sale_agency_region,
+    if(Match(sale_end_country,'AI','AG','AN','AQ','AW','BB','BM','BS','BW','CW','DM','FK','GD','GL','GS','GY','JM','KN','KY','LC','MS','PR','TC','TT','UM','VC','VG','VI','SR','DO')
+    or Match(sale_start_country,'AI','AG','AN','AQ','AW','BB','BM','BS','BW','CW','DM','FK','GD','GL','GS','GY','JM','KN','KY','LC','MS','PR','TC','TT','UM','VC','VG','VI','SR','DO'),'Yes','No') as sale_caribbean_flag,
+    if(match(sale_end_country,'AR','BO','BR','CL','CO','EC','PY','PE','UY','VE') 
+        or match(sale_start_country,'AR','BO','BR','CL','CO','EC','PY','PE','UY','VE'),'Yes','No') as sale_latam_flag,
+	
+    If(match(sale_service_execution_followup,'APP','PLANNED'),'1. Pending Pickup',if(match(sale_service_execution_followup,'CD','STARTED'), '2. In Transit','3. Delivered')) as sale_status,
+    if(sale_start_geo ='AMS' and match(sale_end_geo,'APAC','EMEA'),'Outbound',
+        if(match(sale_start_geo,'APAC','EMEA') and sale_end_geo ='AMS', 'Inbound','Intra AMS')) as sale_lane,
+	if(sale_actual_end_date > date(addmonths('$(vToday)',-12)),1,0) as sale_flag_12_months,
+  	If(wildmatch(sale_service_start_name,'*RBC*'), 'RBC', 'Not RBC') as RBC_Flag,
+
+     
+
+    if(sale_weight_kg <= 100, '0-100 kgs',
+        if(sale_weight_kg <= 200, '100-200 kgs',
+            if(sale_weight_kg <= 300, '200-300 kgs',
+                if(sale_weight_kg <= 400, '300-400 kgs',
+                    if(sale_weight_kg <= 1000, '500-1000kgs',
+                        if(sale_weight_kg <= 2000, '1000-2000 kgs',
+                            if(sale_weight_kg <= 3000, '2000-3000 kgs',
+                                if(sale_weight_kg <= 4000, '3000-4000 kgs',
+                                    if(sale_weight_kg <= 10000,'5000 - 10000 kgs','+10000 kgs'))))))))) as sale_weight_bracket,
+                                    
+    if(sale_contractor_party_Group_N1='IBM_FIGO' or sale_contractor_party_Group_N1='IBM_NCS','IBM',
+    if(sale_contractor_party_Group_N1='SOFTLYR_MD','SOFTLAYER',
+    if(match(sale_contractor_party_Group_N1,'ALIGN','AMS_ALIGN'),'ALIGN',
+    if(wildmatch(sale_contractor_party,'VELOXINT*'),'VELOXINT',
+    if(WildMatch(sale_contractor_party,'APEX*'),'APEX',
+    if(WildMatch(sale_contractor_party,'ARROW*'),'ARROW',
+    if(WildMatch(sale_contractor_party,'BROOKAY*'),'BROOKLYN KAYAK',
+    if(WildMatch(sale_contractor_party,'EGYM*'),'EGYM',
+    if(WildMatch(sale_contractor_party,'FADS*'),'FADS',
+    if(WildMatch(sale_contractor_party,'JBI*'),'JBI',
+    if(WildMatch(sale_contractor_party,'DSS*'),'DSS',
+    if(WildMatch(sale_contractor_party,'DEVIALET*'),'DEVIALET',
+    if(WildMatch(sale_contractor_party,'KTEK*'),'KTEK',
+    if(WildMatch(sale_contractor_party,'FOOJI*'),'FOOJI',
+    if(WildMatch(sale_contractor_party,'OVO*'),'OVO',
+    if(WildMatch(sale_contractor_party,'PREMIER*'),'PREMIER',
+    if(WildMatch(sale_contractor_party,'TECHDATA*'),'TECHDATA',
+    if(WildMatch(sale_contractor_party,'THALES*'),'THALES',
+    if(WildMatch(sale_contractor_party,'CITY*'),'CITY DASH',
+    if(WildMatch(sale_contractor_party,'ZLINE*'),'ZLINE',
+    if(WildMatch(sale_contractor_party,'JLL*'),'JLL',
+    if(WildMatch(sale_contractor_party,'KEISER*'),'KEISER FITNESS',
+    if(WildMatch(sale_contractor_party,'QRS*'),'QRS',
+    if(WildMatch(sale_contractor_party,'LUCIANO*'),'LUCIANO',
+    if(WildMatch(sale_contractor_party,'TRANSPAK*'),'TRANSPAK',
+    if(WildMatch(sale_contractor_party,'MIOTECH*'),'MIOTECH',
+    if(WildMatch(sale_contractor_party,'LEDLOUN*'),'LEDGE LOUNGER US',
+    if(WildMatch(sale_contractor_party,'DLB*'),'DLB',
+    if(WildMatch(sale_contractor_party,'ROSEN*'),'ROSEN',
+    if(WildMatch(sale_contractor_party,'TIMOTHY*'),'TIMOTHY',
+    if(WildMatch(sale_contractor_party,'AMICO*'),'AMICO',
+    if(WildMatch(sale_contractor_party,'PARTY*'),'PARTYCITY',
+    if(WildMatch(sale_contractor_party,'KSM*'),'KSM',
+    if(WildMatch(sale_contractor_party_Group_N1,'KYNDRYL*'),'KYNDRYL',
+    if(WildMatch(sale_contractor_party,'LOLL*'),'LOLL',
+    if(WildMatch(sale_contractor_party,'RAD*'),'RAD',
+    if(WildMatch(sale_contractor_party,'AMS_KEI*'),'KEISER',
+    if(WildMatch(sale_contractor_party,'WW_HI*'),'HID',
+    if(WildMatch(sale_contractor_party,'TRITON*'),'TRITON',
+    if(WildMatch(sale_contractor_party,'UPLN*'),'UPLAND FAB',
+    if(WildMatch(sale_contractor_party,'DJI*'),'DJI',
+    if(WildMatch(sale_contractor_party,'MERGE*'),'MERGE',
+    if(WildMatch(sale_contractor_party,'RIMOWA*'),'RIMOWA',
+    if(WildMatch(sale_contractor_party,'EXCLUSNETW*'),'EXCLUSIVE NETWORKS',
+    if(WildMatch(sale_contractor_party,'MERATIVEUS*'),'MERATIVE',
+    if(WildMatch(sale_contractor_party,'COMPUTACENTER*','COMPCTR_*','SCO_COMPUTACENTER*'),'COMPUTACENTER',
+    if(WildMatch(sale_contractor_party,'*SOLIDIG*'),'SOLIDIGM',
+    if(sale_service_short_name = 'BP','BP',
+    if(sale_contractor_party = 'ROCKWELLUS','ROCKWELL',
+    if( sale_contractor_party = 'MYPARCELUS', 'MY PARCEL',
+    if(sale_service_BusinessUnit = 'Chervon','CHERVON',
+    'OTHER'))))))))))))))))))))))))))))))))))))))))))))))))))) AS "Client",
+            if(not match(sale_country2country,'US-US','MX-US','MX-CA','CA-CA','MX-PR','MX-GU','US-PR','US-GU','CA-PR','CA-GU','US-CA','MX-MX'),'Inter Team','Intra Team') as GEODIS_ops_Team,
+    if(not match(sale_country2country,'CA-US','CA-MX','US-MX','US-US','MX-US','MX-CA','CA-CA','MX-PR','MX-GU','US-PR','US-GU','CA-PR','CA-GU','US-CA','MX-MX'),'Inter Team','Intra Team') as GEODIS_finance_Team,
+    
+
+    if(wildmatch(sale_service_start_address,'*14TH AVE*'),1,0) as sale_kyndryl_wh_flag
+                        
+resident sale_basic_temp_1
+where not match((sale_end_geo & sale_start_geo),$(vGeo2Geo)) 
+and len(exclude_data_model) = 0 
+and not match(sale_service_type,'TRADE_COMPLIANCE','FINANCE')
+and sale_start_country = 'MX'
+and sale_end_country = 'NL'
+;
+
+
+
+Drop Table sale_basic_temp_1;
+//exit script;
+
+//sale Info--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+//HU Refence
+[hu_T]:
+left keep(sale_basic_temp)
+load distinct
+    sale_service_id
+
+resident sale_basic_temp
+where sale_app_source = 'Zenith';
+
+
+left join([hu_T])
+LOAD Distinct
+
+    sale_service_id,
+    sale_HU_customer_reference as hu_reference,
+    if(wildmatch(sale_HU_customer_reference,'GAAA*','GAAB*'),1,0) as eorder_flag,
+    if(wildmatch(sale_HU_customer_reference,'GWG*'),1,0) as newcu_flag,
+    IF(WildMatch(sale_HU_customer_reference, 'G18*','G1*','G2*','GAAA*','GWG*','GAAB*'), 'Vendor', 
+        if(WildMatch(sale_HU_customer_reference,'95*','96*','97*','98*','99*') and match(len(sale_HU_customer_reference),6) or WildMatch(sale_HU_customer_reference,'10*','11*') and match(len(sale_HU_customer_reference),7),'Softlayer',
+            if(WildMatch(sale_HU_customer_reference,'IBM*','HG*','VHE*') and WildMatch(sale_HU_customer_reference,'*D'),'Final Mile HU','Plant'))) as IsGNumber
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_HU.qvd] (qvd);
+
+
+hu_mpo:
+left keep(sale_basic_temp)
+load distinct 
+    sale_service_id,
+    sale_service_customer_reference as "hu_reference" 
+
+FROM [lib://SCO-BI-Common Shared Data  Transormed/Geoflow_Sale_Service_Transformed.qvd] (qvd)
+where APP_Source = 'MPO'
+and match(sale_contractor_party_Group_N1,'AMS_KEISER');
+
+concatenate([hu_T])
+load distinct
+    *
+resident hu_mpo;
+
+drop table hu_mpo;
+
+
+
+hu_llp:
+left keep(sale_basic_temp)
+load distinct
+    sale_service_id,
+    sale_service_HID_reference_10 as "hu_reference"
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_HID.qvd]
+(qvd);
+
+concatenate([hu_T])
+load distinct
+    *
+resident hu_llp;
+
+drop table hu_llp;
+
+
+hu_solidigm:
+left keep(sale_basic_temp)
+load distinct
+
+    SOLIDIGM_Sale_Service_systemid as sale_service_system_id,
+    SOLIDIGM_sale_service_eOrderExtIdHardLink as "hu_reference"
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_SOLIDIGM.qvd]
+(qvd);
+
+left join(hu_solidigm)
+load distinct
+    sale_service_system_id,
+    sale_service_id
+resident sale_basic_temp;
+
+concatenate([hu_T])
+load distinct
+    sale_service_id,
+    hu_reference
+resident hu_solidigm;
+
+drop field sale_service_system_id from hu_T;
+
+drop table hu_solidigm;
+
+
+
+left join(sale_basic_temp)
+load distinct
+    *
+resident hu_T;
+
+drop table hu_T;
+
+
+[specific_info]:
+LEFT join ([sale_basic_temp])
+LOAD DISTINCT
+    sale_service_id,
+    IBM_CUSTOMER_HAWB as sale_ibm_customer_hawb,
+    IBM_IOT_Flag,
+    IBM_Standard_Carrier_Alpha_Code,
+    IBM_HAWB,
+    IBM_Critical_Shipment,
+    IBM_Transport_Mode,
+    IF(LEN(IBM_HAWB) = 0, IBM_CUSTOMER_HAWB, IBM_HAWB) as ConsolidatedAWB,
+    IBM_CUSTOMER_HAWB,
+    IBM_Ship_From_Code,
+    IBM_Ship_To_Code,
+    IBM_Dispatch_Advice,
+    IBM_TRACKING_NUMBER,
+    IBM_Order_Type,
+    if(IBM_Standard_Carrier_Alpha_Code = 'GFXX' or IBM_Ship_From_Code = 'GFXX' or IBM_Ship_To_Code = 'GFXX', 'GFXX') as GFXX_KU_flag
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_Sale_Service_IBM.qvd] (qvd);
+
+LEFT join ([sale_basic_temp])
+LOAD distinct
+
+    sale_service_id,
+    Sale_Service_NEWCUS_Standard_Carrier_Alpha_Code as sale_service_NEWCUS_Standard_Carrier_Alpha_Code
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_NEWCUS.qvd]
+(qvd);
+
+left join(sale_basic_temp)
+Load distinct
+
+    sale_service_id,
+    1 as sale_be_af_flag
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_BE.qvd]
+(qvd)where match(sale_event_code,'AF','E13');
+
+left join(sale_basic_temp)
+Load distinct
+
+    sale_service_id,
+    1 as sale_be_71_flag
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_BE.qvd]
+(qvd)where app_source = 'Zenith'
+and match(sale_event_code,'71');
+
+left join(sale_basic_temp)
+Load distinct
+
+    sale_service_id,
+    1 as sale_be_d_flag,
+    sale_event_reason_code as sale_be_d_reason_code
+
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_BE.qvd]
+(qvd)where match(sale_event_code,'D','X1','E21');
+
+[sale_basic]:
+LOAD
+*,
+    if(sale_contractor_party_Group_N1='IBM_FIGO',
+        if(sale_start_geo='AMS' and IsGNumber_temp = 'Vendor','Vendor',
+            if(sale_start_country='MX' and match(IBM_Ship_From_Code,'781Z1D'),'Appliances',
+                if(sale_start_country='MX' and match(IBM_Ship_From_Code,'78175W','78175P'),'Power',
+                    if(sale_start_country='MX'and match(IBM_Ship_From_Code,'78175P','7812D5','7812DB','7812DE','7812DM','7812DP','7812KC','7812KE','7812KX','7812KT','781935','781ZSP','7819SE'),'Storage',
+                        if(sale_start_country='MX' and match(sale_start_zip_code,'JAL-45659','JAL-45619','JAL-45680'),'FIGO',
+                            if(match(sale_start_zip_code,'AL-35824','WA-98032'),'Storage',
+                                if(match(sale_start_zip_code,'WI-53719','WI-53701'),'Appliances',
+                                    if(match(sale_start_zip_code,'KY-40219','KY-41018'),'SPO',
+                                        if(sale_start_country='US' and len("hu_reference")=13 and WildMatch("hu_reference",'2*'),'FIGO',
+                                            if(sale_start_country='MX' and not wildMatch(ConsolidatedAWB,'*GDL*'),'Storage',
+                                                if(sale_end_zip_code='MN-55901','GARS',
+                                                    if(match(sale_end_zip_code,'KY-40219','KY-41018'),'SPO',
+                                                        if(sale_start_country='HU' and sale_start_zip_code='2600', 'Storage',
+                                                            if(sale_start_country='NL' and sale_start_zip_code='5928 LR', 'SPO',
+                                                                if(match(sale_start_zip_code,'NY-12601','MN-55901') and mid("hu_reference",7,2)='IC','GARS',
+                                                                    if(match(sale_start_geo,'EMEA','APAC') and wildmatch(sale_service_start_name,'*GEODIS*','*IBM*','*CDC*'),'FIGO','Other'))))))))))))))))) as sale_ibm_brand,
+                                                                      
+    //KPIS--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    if(sale_service_execution_followup = 'CD','',
+        if(sale_service_execution_followup = 'CL','',
+            if(sale_planned_start_date < '$(vToday)',0,1))) as Due_Pickup_Kpi,
+
+    if(sale_service_execution_followup = 'CL','',
+        if(sale_planned_end_date < '$(vToday)',0,1)) as Due_Delivery_Kpi,
+
+    if(match([sale_service_execution_followup],'APP','PLANNED'), 'On Going',if(sale_requested_start_date >= sale_actual_start_date,1,0)) as sale_start_date_kpi,
+    if(match([sale_service_execution_followup],'CD','APP','PLANNED','STARTED'), 'On Going',if(sale_requested_end_date >= sale_actual_end_date,1,0)) as sale_end_date_kpi,
+
+    if((sale_actual_start_date-sale_requested_start_date)<=1, '24 hrs',
+        if((sale_actual_start_date-sale_requested_start_date)<=2,'48 hrs',
+            if((sale_actual_start_date-sale_requested_start_date)<=3,'72 hrs','Late'))) as sale_start_date_kpi_bracket,
+
+    if((sale_actual_end_date-sale_requested_end_date)<=0, '24 hrs',
+        if((sale_actual_end_date-sale_requested_end_date)<=2,'48 hrs',
+            if((sale_actual_end_date-sale_requested_end_date)<=3,'72 hrs','Late'))) as sale_end_date_kpi_bracket,
+
+    if(match([sale_service_execution_followup],'APP','PLANNED'),if(sale_planned_start_date >= '$(vToday)',1,0),if(sale_planned_start_date >= sale_actual_start_date,1,0)) as sale_planned_start_date_KPI,
+    if(match([sale_service_execution_followup],'CD','APP','STARTED','PLANNED'), if(sale_planned_end_date >= '$(vToday)',1,0),if(sale_planned_end_date >= sale_actual_end_date,1,0)) as sale_planned_end_date_KPI,
+    if(match(sale_contractor_party_Group_N1 & IBM_Ship_From_Code & left("hu_reference",3),'IBM_FIGOARBOMCA','IBM_FIGOARBOSSA')
+        or match(sale_service_short_name,'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP')
+            or match(sale_contractor_party_Group_N1 & IBM_Ship_From_Code & left(sale_ibm_customer_hawb,4),'IBM_FIGOMCCG18DFORW','IBM_FIGOMCCG18DRETU')
+                or match(sale_contractor_party_Group_N1 & sale_be_d_reason_code,'IBM_FIGOZ12','IBM_SOZ12','SOFTLYR_MDZ12') ,1,0) as net_flag,
+            
+    if(sale_current_transit_time > 2 and match(sale_service_execution_followup,'CD','STARTED'),'+2 Future Delivery') as sale_plus2_future_delivery,
+    
+    if(Client = 'IBM' and len(IsGNumber_temp) = 0,'Plant',IsGNumber_temp) as IsGNumber, 
+    
+   If(sale_actual_end_year = '$(vCurrentYear)'
+    OR sale_actual_end_year = '$(vPastyear)' 
+    AND sale_actual_end_month >= '$(vCurrentMonth)' - 1,1,0) AS sale_one_yearmonth_flag,
+    if(sale_creation_month = '$(vCurrentMonth)' and sale_creation_year = '$(vCurrentYear)',1,0) as sale_current_month_flag, 
+    
+    NetWorkDays(sale_start_date,sale_end_date) as sale_start_end_transit_time,
+    
+     if(kpi_requested_today_days_pickup >= 0, 'On Time',
+        if(kpi_requested_today_days_pickup >= -3,'1-3 days',
+            if(kpi_requested_today_days_pickup >= -4,'4-6 days','7+ days'))) as kpi_requested_today_bracket_pickup_pickup,
+
+    if( kpi_requested_today_days_pickup < 0, 'Late',
+        if( kpi_requested_today_days_pickup = 0, 'Today',
+        if( kpi_requested_today_days_pickup = 1,'1 days',
+            if( kpi_requested_today_days_pickup = 2,'2 days',
+                if( kpi_requested_today_days_pickup = 3,'3 days','+3 days' ))))) as kpi_requested_today_bracket_internal_pickup,
+
+    if(kpi_requested_today_days_pickup <= 0, 'On Time',
+        if(kpi_requested_today_days_pickup <= 3,'1-3 days',
+            if(kpi_requested_today_days_pickup <= 4,'4-6 days','7+ days'))) as kpi_requested_bracket_pickup,
+
+        if(kpi_requested_today_days_delivery >= 0, 'On Time',
+        if(kpi_requested_today_days_delivery >= -3,'1-3 days',
+            if(kpi_requested_today_days_delivery >= -4,'4-6 days','7+ days'))) as kpi_requested_today_bracket_delivery,
+
+    if( kpi_requested_today_days_delivery < 0, 'Late',
+        if( kpi_requested_today_days_delivery = 0, 'Today',
+        if( kpi_requested_today_days_delivery = 1,'Tomorrow',
+            '+2 days' ))) as kpi_requested_today_bracket_internal_delivery,
+
+    if(kpi_requested_today_days_delivery <= 0, 'On Time',
+        if(kpi_requested_today_days_delivery <= 3,'1-3 days',
+            if(kpi_requested_today_days_delivery <= 4,'4-6 days','7+ days'))) as kpi_requested_bracket_delivery
+
+
+
+//    if(planned_delivery_days < '-2', '2+ Days',
+//        if(planned_delivery_days = '-1', 'Tomorrow',
+//            if(planned_delivery_days = '0', 'Today',
+//                if(planned_delivery_days > '0', 'Due Delivery')))) as sale_planned_delivery_aging
+    
+
+
+resident [sale_basic_temp]
+
+where 
+
+(match(sale_service_execution_followup,'NAP')
+and GEODIS_ops_Team = 'Intra Team')
+
+or 
+
+(not match(sale_service_execution_followup,'NAP') 
+and not match(sale_start_country&sale_end_country,'MXMX')
+and not match(sale_service_short_name,'IBM_MD_NB')
+and not match(sale_end_country & IBM_Standard_Carrier_Alpha_Code,'MXAXA')
+and not match(sale_service_short_name & newcu_flag,'EGYM_US/TRS0','DEVIALET_US/TRS0')
+and not match(sale_contractor_party & sale_service_NEWCUS_Standard_Carrier_Alpha_Code,'BROOKAY_USGFXX')
+and not match(sale_contractor_party_Group_N1 & IBM_Ship_From_Code,'SOFT_MD_JPSL-IBM-BRK','SOFTLYR_MDSL-IBM-BRK','IBM_FIGOFZ','IBM_FIGONETEZZASTG','SOFTLYR_MDFZ') //,'IBM_FIGOPSMTM'
+and not match(sale_contractor_party_Group_N1 & IBM_Ship_To_Code,'SOFTLYR_MDBRK-SL-IBM','SOFT_MD_JPSL-IBM-BRK','SOFTLYR_MDSL-IBM-BRK','IBM_FIGOFZ','IBM_FIGONETEZZASTG','SOFTLYR_MDFZ') //,'IBM_FIGOPSMTM'
+and not match(sale_contractor_party_Group_N1 & left("hu_reference",4),'IBM_FIGOPAQU','IBM_FIGOASNS','IBM_FIGORENT','IBM_FIGOMCCG')
+and not match(sale_service_nature,'LOW','ADMIN','TACCS')
+and match(GEODIS_ops_Team,$(vLane))
+)
+
+or (match(sale_start_country& sale_start_state & sale_end_country & sale_end_zip_code,'MXJALMX45659')
+and not match(sale_contractor_party_Group_N1 & left("hu_reference",4),'IBM_FIGOPAQU','IBM_FIGOASNS')
+and match(GEODIS_ops_Team,$(vLane)))
+
+or (match(IBM_Standard_Carrier_Alpha_Code,'GF60')
+and match(GEODIS_ops_Team,$(vLane)))
+
+or (sale_app_source = 'MPO'
+and match(GEODIS_ops_Team,$(vLane)))
+
+or match(sale_service_short_name,'IBMMAFDXGSP/US','IBMMAFDXGSP/CA') //Dani
+
+;
+
+
+
+
+
+
+Drop Table  sale_basic_temp;
+//drop field sale_be_71_flag_temp;
+//Exit script;
+
+//sale_buy ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+// sale vs buy
+[sale-buy_temp]:
+LEFT KEEP ([sale_basic])
+LOAD DISTINCT
+    sale_service_id,
+    if(isnull(buy_service_id),'Missing',buy_service_id) AS buy_service_id,
+    NbSaleServicesLeg,
+    buy_amount_ht_YtdEur as "buy_eur_amount",
+    sale_amount_ht_YtdEur as "sale_eur_amount",
+    APP_Source
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Buy_Facts.qvd] (qvd);
+
+left join([sale-buy_temp])
+load distinct
+    sale_service_id,
+    sale_local_amount
+resident sale_basic;
+
+
+
+//buy ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+//[buy]:
+[buy_basic_temp]:
+left KEEP([sale-buy_temp])
+LOAD DISTINCT
+    buy_service_id,
+    buy_local_amount,
+    buy_local_currency,
+    Party_Short_Name_buy_executor_party AS buy_executor_short_name,
+    buy_service_short_name as buy_service_short_name,
+    buy_executor_party_Group_N1 as buy_executor_party_group_n1,
+    if(Match(buy_executor_party_Group_N1,'DT','DC'),Party_Short_Name_buy_executor_party,buy_executor_party_Group_N1) as Carrier1,
+    num(buy_weight_kg,'# ###.000','.',' ') as "buy_weight_kg",
+    buy_executed_SLA as "buy_executed_SLA",
+    buy_service_start_name as buy_start_name,
+    buy_start_country as "buy_start_country",
+    buy_start_zone as "buy_start_zip_code",
+    SubField(buy_start_zone, '-', 1) as buy_start_state,
+    buy_end_country as "buy_end_country",
+    buy_start_city as "buy_start_city",
+    buy_end_city as "buy_end_city",
+    buy_end_zone as "buy_end_zip_code",
+     SubField(buy_end_zone, '-', 1) as buy_end_state,
+    buy_service_start_address as buy_start_addres,
+    buy_service_end_address as buy_end_addres,
+    buy_service_execution_followup,
+    buy_actual_start_date as "buy_actual_start_date",
+    buy_actual_end_date as buy_actual_end_date,
+    buy_creation_date as buy_creation_date,
+    if(buy_service_execution_followup='   ',buy_planned_end_date_before,buy_actual_end_date) as buy_start_date,
+    if(match(buy_service_execution_followup,'CL','FINISHED'),buy_actual_end_date,buy_planned_end_date_before) as buy_end_date,
+    APP_Source as buy_app_source,
+    buy_service_end_name as buy_end_name,
+    buy_service_nature as buy_service_nature,
+    buy_service_invoice_bursting as buy_invoice_bursting,
+    buy_service_external_reference as buy_external_reference,
+    buy_planned_start_date_before,
+    buy_requested_start_date_after,
+    buy_requested_end_date_after,
+    buy_planned_end_date_before,
+    if(buy_actual_start_date <= buy_planned_start_date_before,1,0) as buy_kpi_on_time_pickup,
+    if(buy_actual_end_date <= buy_planned_end_date_before,1,0) as buy_kpi_on_time_delivery,
+    if(buy_weight_kg <= 100, '0-100 kgs',
+        if(buy_weight_kg <= 200, '100-200 kgs',
+            if(buy_weight_kg <= 300, '200-300 kgs',
+                if(buy_weight_kg <= 400, '300-400 kgs',
+                    if(buy_weight_kg <= 1000, '500-1000kgs',
+                        if(buy_weight_kg <= 2000, '1000-2000 kgs',
+                            if(buy_weight_kg <= 3000, '2000-3000 kgs',
+                                if(buy_weight_kg <= 4000, '3000-4000 kgs',
+                                    if(buy_weight_kg <= 10000,'5000 - 10000 kgs','+10000 kgs'))))))))) as buy_weight_bracket
+    
+FROM [lib://SCO-BI-Common Shared Data  Transormed/Geoflow_Buy_Service_Transformed.qvd] (qvd)
+where not WildMatch(buy_executor_party_Group_N1,'GONTOR*',' - ','GFFBROK_CA','GFFBROKERG','GEODIS_PL')
+and not WildMatch(Party_Short_Name_buy_executor_party,'GONTOR*',' - ','GFFBROK_CA','GFFBROKERG','SILKEY',
+'TNT','AXAINSU_MX')
+and not match(Party_Short_Name_buy_executor_party,'IBM_MD_IL/SHU','GEODIS_PL')
+and not match(buy_service_execution_followup,'EPU')
+and APP_Source = 'Zenith'
+;
+
+//[buy]:
+[MPO_temp]:
+left keep([sale-buy_temp])
+LOAD DISTINCT
+    buy_service_id,
+    buy_local_amount,
+    buy_executor_partyID AS buy_executor_short_name,
+    buy_service_short_name as buy_service_short_name,
+    buy_executor_partyID as buy_executor_party_group_n1,
+    buy_executor_partyID as Carrier1,
+    num(buy_weight_kg,'# ###.000','.',' ') as "buy_weight_kg",
+    buy_executed_SLA as "buy_executed_SLA",
+    buy_service_start_name as buy_start_name,
+    buy_start_zone as buy_start_zip_code,
+    buy_start_country as "buy_start_country",
+    buy_end_country as "buy_end_country",
+    buy_start_city as "buy_start_city",
+    buy_end_city as "buy_end_city",
+    buy_end_zone as buy_end_zip_code,
+    buy_service_start_address as buy_start_addres,
+    buy_service_end_address as buy_end_addres,
+    buy_service_status as buy_service_execution_followup,
+    buy_actual_start_date as "buy_actual_start_date",
+    buy_actual_end_date as "buy_actual_end_date",
+    buy_requested_start_date_before,
+    buy_planned_end_date_before,
+    buy_creation_date as buy_creation_date,
+    if(buy_service_execution_followup='   ',buy_planned_end_date_before,buy_actual_end_date) as buy_start_date,
+    if(match(buy_service_execution_followup,'CL','FINISHED'),buy_planned_end_date_before,buy_actual_end_date) as buy_end_date,
+    APP_Source as buy_app_source,
+    buy_service_end_name as buy_end_name,
+    buy_service_nature as buy_service_nature,
+    buy_service_external_reference as buy_external_reference,
+    buy_planned_start_date_before,
+    buy_requested_start_date_after,
+    buy_requested_end_date_after,
+    if(buy_actual_start_date <= buy_planned_start_date_before,1,0) as buy_kpi_on_time_pickup,
+    if(buy_actual_end_date <= buy_planned_end_date_before,1,0) as buy_kpi_on_time_delivery
+
+
+
+FROM [lib://SCO-BI-Common Shared Data  Transormed/Geoflow_Buy_Service_Transformed.qvd] (qvd)
+where APP_Source = 'MPO'
+;
+
+
+left join(MPO_temp)
+Load 
+
+    zip as buy_start_zip_code,
+    state AS buy_start_state
+
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/zip_code_database.xls]
+(biff, embedded labels, table is zip_code_database$);
+
+left join(MPO_temp)
+load
+
+    zip as buy_end_zip_code,
+    state AS buy_end_state
+
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/zip_code_database.xls]
+(biff, embedded labels, table is zip_code_database$);
+
+
+[MPO]:
+concatenate(buy_basic_temp)
+Load distinct
+    *
+resident MPO_temp;
+
+drop table MPO_temp;
+
+//sale-buy -----------------------------------------------------------------------------
+
+
+
+LEFT join ([sale-buy_temp])
+LOAD DISTINCT
+   buy_service_id,
+   buy_service_id as buy_service_id2,
+   buy_local_amount
+
+resident buy_basic_temp;  
+
+drop field buy_service_id from [sale-buy_temp];
+
+[sale-buy]:
+noconcatenate
+LOAD DISTINCT
+   sale_service_id,
+   buy_service_id2 as buy_service_id,
+   if(APP_Source = 'MPO',buy_local_amount * 1.2135,buy_eur_amount) as buy_eur_amount,
+   if(APP_Source = 'MPO',sale_local_amount * 1.2135,sale_eur_amount) as sale_eur_amount,
+   sale_service_id & buy_service_id2 as sale_buy_id
+
+resident [sale-buy_temp] 
+where len(trim(buy_service_id2)) > 2;
+
+drop table [sale-buy_temp];
+
+//------------------------------------------------------------------------------------------------
+
+
+left join(buy_basic_temp)
+Load distinct
+
+    buy_service_id,
+    1 as buy_be_71_flag_temp
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_BE.qvd]
+(qvd)where app_source = 'Zenith'
+and match(buy_event_code,'71');
+
+
+
+sale_cw:
+left join(sale_basic)
+LOAD distinct
+    CSO as sale_service_id,
+    round("CSO Chargeable Weight") as sale_finance_cw,
+    [CSO Status] as sale_finance_status,
+    [CSO Invoice] as sale_fa_invoice
+    
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/App_Connexion/Finance_input_2.0.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+
+
+//loading number
+
+saleloading:
+left join(sale_basic)
+LOAD
+    sale_service_id,
+    sale_service_loading_number as sale_loading_number,
+    sale_service_invoice_bursting
+
+   
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service.qvd]
+(qvd);
+
+
+//buy Info-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// buy basic information
+[buy_basic]:
+noconcatenate
+LOAD DISTINCT
+    *,
+    if(wildmatch(Carrier1,'GEOWILARMD','GEOWILIL'),'GEODIS FF',
+        if(wildmatch(Carrier1,'CRST_US'),'CRST',
+            if(wildmatch(Carrier1,'CC_CARRIER_FEDEX','*FedEx*'), 'FEDEX',
+                if(wildmatch(Carrier1,'*Nippon*'), 'NIPPON',
+                    if(wildmatch(Carrier1,'*Kuehne*'), 'KN',
+                        if(wildmatch(Carrier1,'*KWE*'), 'KWE',
+                            if(wildmatch(Carrier1,'*NNR*'), 'NNR',
+                                if(wildmatch(Carrier1,'*UPS*'), 'UPS',
+                                    if(wildmatch(Carrier1,'*DGF*'), 'DGF',
+                                        if(wildmatch(Carrier1,'*Schenker*'), 'SCHENKER',
+                                            if(match(Carrier1,'SOLI_XDOC_EU'), 'KN XDOCK',
+                                                if(match(Carrier1,'SOLI_XDOC_JP'), 'NNR XDOCK',
+                                                    if(match(Carrier1,'SOLI_XDOC_LX'), 'NIPPON XDOCK',
+                                        
+            if(wildmatch(Carrier1,'AIT*'),'AIT',Carrier1)))))))))))))) as Carrier,
+    
+    if((NetWorkDays((buy_actual_start_date),(buy_actual_end_date))-1) < 0,0,(NetWorkDays((buy_actual_start_date),(buy_actual_end_date))-1)) as buy_transit_time,
+    if(buy_be_71_flag_temp = 1,1,0) as buy_be_71_flag
+
+
+resident buy_basic_temp
+where (not match(buy_service_execution_followup,'EPU')
+and not match(Carrier1,'SILKEY','TNT','AXAINSU_MX')
+)
+or
+(
+buy_app_source = 'MPO')
+;
+
+Drop Table buy_basic_temp;
+drop field buy_be_71_flag_temp;
+
+drop field Carrier1;
+
+BE_MAWB:
+left join(buy_basic)
+LOAD
+
+    buy_service_id,
+    buy_BE_MAWB_number
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_BE_MAWB.qvd]
+(qvd);
+
+geo_origin_buy:
+left join(buy_basic)
+LOAD
+    country as "buy_start_country",
+    Geo_Code as "buy_start_geo"
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_REF_country.qvd]
+(qvd) ;
+
+geo_end_buy:
+left join(buy_basic)
+LOAD
+    country as "buy_end_country",
+    Geo_Code as "buy_end_geo"
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_REF_country.qvd]
+(qvd) ;
+
+buy_cw:
+left join(buy_basic)
+LOAD Distinct
+
+    "SSO" as buy_service_id,
+    round("SSO Chargeable Weight") as buy_finance_cw,
+    [SSO Status] as buy_finance_status,
+    [SSO Invoice] as buy_finance_invoice
+
+    
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/App_Connexion/Finance_input_2.0.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+
+//IBM_info:
+//left join(buy_basic)
+//LOAD distinct
+//    buy_service_id,
+//    IBM_buy_requested_service
+
+//FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_Service_IBM.qvd]
+//(qvd);
+
+
+[sale_per_buy]:
+left join(buy_basic)
+Load distinct
+    buy_service_id,
+    count(distinct sale_service_id) as sale_per_buy_qty
+
+resident [sale-buy] group by buy_service_id;
+
+
+[buy_per_sale]:
+left join(sale_basic)
+Load distinct
+    sale_service_id,
+    count(distinct buy_service_id) as buy_per_sale_qty
+
+resident [sale-buy] group by sale_service_id;
+

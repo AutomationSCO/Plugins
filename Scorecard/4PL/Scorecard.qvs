@@ -1,0 +1,353 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+//concatenate(Historical_Dues) 
+[Current_Dues]:
+LOAD
+    *
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/current_dues_4pl.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+
+SET pathReport = '[lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/Backup/4pl_dues_' $(vToday_format) '.csv]';
+
+Store [Current_Dues] into $(pathReport) (txt);
+
+concatenate(Current_Dues)
+LOAD
+    *
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/historical_dues_4pl.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+
+
+Store [Current_Dues] into [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/historical_dues_4pl.csv](txt);
+
+drop table Current_Dues; 
+//-----------------------------------------------------------------------------------------------
+
+[Current_hawb]:
+LOAD
+    *
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/current_hawb_4pl.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+
+SET pathReportAWB = '[lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/Backup/4pl_hawb_' $(vToday_format)'.csv]';
+
+Store [Current_hawb] into $(pathReportAWB) (txt);
+
+concatenate(Current_hawb)
+LOAD
+    *
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/historical_hawb_4pl.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+
+
+Store [Current_hawb] into [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/historical_hawb_4pl.csv](txt);
+
+drop table Current_hawb; 
+
+
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Network Visibility/4PL/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/15. Sale_FirstBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/16. Buy_LastBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/61. master_date.qvs]);
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/4. Amount.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/7. timeliness_completeness.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/8. cw_timeliness_completeness.qvs]);
+
+[Dues_KPI]:
+left keep([sale-buy])
+LOAD distinct
+
+    sale_buy_id,
+    cp_due_pickup_bracket as historical_dues_cp_due_pickup_bracket,
+    cp_due_delivery_bracket as historical_dues_cp_due_delivery_bracket,
+    report_date as historical_dues_report_date,
+    PU_Analyst as historical_dues_PU_Analyst,
+    PU_Team_Responsible as historical_dues_PU_Team_Responsible,
+    Del_Analyst as historical_dues_Del_Analyst,
+    Del_Team_Responsible as historical_dues_Del_Team_Responsible
+    
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/historical_dues_4pl.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+
+
+[Historical_AWB]:
+left keep(Dues_KPI)
+LOAD Distinct 
+    sale_service_id,
+    cp_MissingAWB as historical_AWB_cp_MissingAWB,
+    cp_missing_awb_reportdate as historical_AWB_report_date
+
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/historical_hawb_4pl.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+
+
+
+
+
+[leo_efficency]:
+LOAD
+"Year" as leo_year,
+"Week" as leo_week,
+//"Month" as leo_month,
+Team as leo_team,
+"Declared FTE's" as leo_declared_ftes,
+"Extra Hours" as leo_extra_hours,
+"CLIENT & DEPARTMENT" as leo_client_departament,
+If(Team = 'GUAD.IBM.OPS.CM','Carrier Management',
+If(Team = 'GUAD.IBM.OPS.INTEREMEA','Interpipes EMEA-AMS',
+If(Team = 'GUAD.IBM.OPS.INTERAPAC','Interpipes APAC',
+If(Team = 'GUAD.ALIGN.OPS','Align',
+If(Team = 'GUAD.KEISER.OPS','Keiser',
+If(Team = 'GUAD.KYNDRYL.OPS','Kyndryl',
+If(Team = 'GUAD.WHITEGLOVE.OPS','White Glove',
+If(Team = 'GUAD.IBM.OPS.VM','Vendor Management',
+If(Team = 'GUAD.IBM.OPS.CSRINTRA','INTRA CSR',
+If(Team = 'GUAD.IBM.OPS.CSRINTER','INTER CSR',
+if(Team = 'GUAD.IBM.OPS.IMPORTSGDL','Imports MX',
+    'Other'))))))))))) as leo_ops_team,
+"Efficiency Rate" as leo_rate
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/LEO DB/LEO EFF AMS DASHBOARD.xlsx]
+(ooxml, embedded labels, table is [Data Base]);
+
+
+
+CSM:
+left keep(sale_basic)
+LOAD
+REGION as csm_region,
+PO_ID as csm_po_id,
+DELIVERY_DATE as csm_creation_date,
+"OTD Met Qty" as csm_otd_met_qty,
+"S2D Met Qty" as csm_s2d_met_qty,
+"Code 2" as csm_code_2,
+"Geodis Responsibility" as csm_geodis_responsibility,
+REPORT_MONTH as csm_report_month,
+CSO as sale_service_id,
+'csm' as csm_source
+
+FROM [lib://Geo_AMS/Automation/BI/4PL/Data CSM 2020.xlsx]
+(ooxml, embedded labels, table is Data);
+
+concatenate(CSM)
+Load
+    
+    if(S2D_MET = 'false' and RCA_CATEGORY = 'GL',0,1) as csm_s2d_met_qty,
+    IMT as csm_region,
+    PO_ID as csm_po_id,
+    if(OTD_MET  = 'false' and RCA_CATEGORY = 'GL',0,1) as csm_otd_met_qty,
+    RCA_CATEGORY as csm_code_2,
+    REPORT_MONTH as csm_report_month,
+    ACTUAL_TRACKING_NUM as sale_service_id,
+    'gloss' as csm_source
+
+FROM [lib://Geo_AMS/Automation/BI/4PL/Data GLOSS.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+
+Precall_csm:
+LOAD
+    SHIP_ID as csm_precall_ship_id,
+    PRECALL_STATUS_CODE as csm_precall_status_code,
+    report_month as csm_report_month
+
+FROM [lib://Geo_AMS/Automation/BI/4PL/Precall 2020.xlsx]
+(ooxml, embedded labels, table is 'Precall 2020');
+
+concatenate(Precall_csm)
+load 
+    PRECALL_STATUS as csm_precall_status_code, 
+    REPORT_MONTH as csm_report_month,
+    SHIP_ID_CUS as csm_precall_ship_id
+
+FROM [lib://Geo_AMS/Automation/BI/4PL/GLOSS - PRECALL.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+
+[EDI_T&C]:
+LOAD
+"Month" as ibm_report_month,
+"PU Timeliness 24" as ibm_pu_timeliness_24,
+"PU Timeliness 48"as ibm_pu_timeliness_48,
+"PU Timeliness 5"as ibm_pu_timeliness_5,
+"D Timeliness 24"as ibm_del_timeliness_24,
+"D Timeliness 48"as ibm_del_timeliness_48,
+"D Timeliness 5"as ibm_del_timeliness_5,
+"Completeness Gross PU" as ibm_pu_completeness_gross,
+"Completeness Net PU" as ibm_pu_completeness_net,
+"Completeness Gross D" as ibm_del_completeness_gross,
+"Completeness Net D"  as ibm_del_completeness_net,
+    "OTD Net" as ibm_otd_net,
+    "OTD Carrier" as ibm_otd_carrier,
+    "S2D Net" as ibm_s2d_net,
+    "S2D Carrier" as ibm_s2d_carrier,
+    "GL Deffects %" as ibm_gl_deffects,
+    "GL Deffects Total Orders" as ibm_gl_deffects_orders,
+    Precall as ibm_precall
+FROM [lib://Geo_AMS/Automation/BI/4PL/EDI T&C.xlsx]
+(ooxml, embedded labels, table is Hoja1);
+
+Escalations:
+LOAD
+    "Escalation ID" as escalation_id,
+    //Reference,
+    "Register Date" as escalation_date,
+    "Escalation Source" as escalation_source,
+    Escalated as escalation_escalated,
+    //"Escalated Position",
+    Team as escalation_team,
+    //"Escalation Level",
+    //"Escalated By",
+    //"Escalated By Position",
+    "Escalation Type" as escalation_type,
+    "RCCA Needed" as escalation_rcca_needed,
+    //"RCCA #",
+    //"Rcca Deadline Date",
+    Status as escalation_status,
+    cso_number as sale_service_id,
+    "Scalation Comments" as escalation_comments
+FROM [lib://Geo_AMS/LogisticsAnalyst/Escalation Dashboard/Escalation Data Base.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+
+master_date:
+left keep(sale_basic)
+Load
+    sale_service_id,
+    sale_actual_master_date,
+    sale_master_date_type
+resident master_date;
+
+
+
+
+exit script;
+
+
+
+
+
+//-------------------------------------------------------------------------------------------------------
+
+
+
+
+
+qualitative_SC:
+LOAD
+    Analyst as qualitative_analyst,
+    Percentage as qualitative_aging,
+    "Year-Week" as qualitative_yearweek,
+    "Year-Month" as qualitative_yearmonth,
+    Metric as qualitative_metric,
+    Team as qualitative_team
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Qualitative SC.xlsx]
+(ooxml, embedded labels, table is EMEA);
+
+
+
+concatenate(qualitative_SC)
+LOAD
+    Analyst as qualitative_analyst,
+    Percentage as qualitative_aging,
+    "Year-Week" as qualitative_yearweek,
+    "Year-Month" as qualitative_yearmonth,
+    Metric as qualitative_metric,
+    Team as qualitative_team
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Qualitative SC.xlsx]
+(ooxml, embedded labels, table is APAC);
+
+concatenate(qualitative_SC)
+LOAD
+    Analyst as qualitative_analyst,
+    Percentage as qualitative_aging,
+    "Year-Week" as qualitative_yearweek,
+    "Year-Month" as qualitative_yearmonth,
+    Metric as qualitative_metric,
+    Team as qualitative_team
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Qualitative SC.xlsx]
+(ooxml, embedded labels, table is "K & A");
+
+concatenate(qualitative_SC)
+LOAD
+    Analyst as qualitative_analyst,
+    Percentage as qualitative_aging,
+    "Year-Week" as qualitative_yearweek,
+    "Year-Month" as qualitative_yearmonth,
+    Metric as qualitative_metric,
+    Team as qualitative_team
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Qualitative SC.xlsx]
+(ooxml, embedded labels, table is WG);
+
+concatenate(qualitative_SC)
+LOAD
+    Analyst as qualitative_analyst,
+    Percentage as qualitative_aging,
+    "Year-Week" as qualitative_yearweek,
+    "Year-Month" as qualitative_yearmonth,
+    Metric as qualitative_metric,
+    Team as qualitative_team
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Qualitative SC.xlsx]
+(ooxml, embedded labels, table is VM);
+
+concatenate(qualitative_SC)
+LOAD
+    Analyst as qualitative_analyst,
+    Percentage as qualitative_aging,
+    "Year-Week" as qualitative_yearweek,
+    "Year-Month" as qualitative_yearmonth,
+    Metric as qualitative_metric,
+    Team as qualitative_team
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Qualitative SC.xlsx]
+(ooxml, embedded labels, table is CM);
+
+concatenate(qualitative_SC)
+LOAD
+    Analyst as qualitative_analyst,
+    Percentage as qualitative_aging,
+    "Year-Week" as qualitative_yearweek,
+    "Year-Month" as qualitative_yearmonth,
+    Metric as qualitative_metric,
+    Team as qualitative_team
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Qualitative SC.xlsx]
+(ooxml, embedded labels, table is Kyndryl);
+
+concatenate(qualitative_SC)
+LOAD
+    Analyst as qualitative_analyst,
+    Percentage as qualitative_aging,
+    "Year-Week" as qualitative_yearweek,
+    "Year-Month" as qualitative_yearmonth,
+    Metric as qualitative_metric,
+    Team as qualitative_team
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Qualitative SC.xlsx]
+(ooxml, embedded labels, table is Align);
+
+concatenate(qualitative_SC)
+LOAD
+    Analyst as qualitative_analyst,
+    Percentage as qualitative_aging,
+    "Year-Week" as qualitative_yearweek,
+    "Year-Month" as qualitative_yearmonth,
+    Metric as qualitative_metric,
+    Team as qualitative_team
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Qualitative SC.xlsx]
+(ooxml, embedded labels, table is [Imports MX]);
+
+
+
+
+
+
+
+
+
+
+
+
+exit script;

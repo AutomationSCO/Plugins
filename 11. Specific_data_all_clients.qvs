@@ -1,0 +1,320 @@
+// service Specific Data Table
+sale_service_specific_data:
+left keep(sale_basic)
+LOAD DISTINCT
+    sale_service_id,
+    Text(If(Trim(IBM_HAWB)='', '-', IBM_HAWB)) AS sale_hawb,
+    Text(IBM_CUSTOMER_HAWB) AS sale_cuhawb,
+    IBM_REQUESTED_SERVICE AS sale_requested_service,
+    IBM_Ship_From_Code AS sale_ship_from_code,
+    IBM_Ship_To_Code AS sale_ship_to_code,
+    IBM_customer_adhoc_reference AS sale_adhoc_reference,
+    'RR'&Subfield(Subfield(IBM_customer_adhoc_reference, 'RR', 2), ' ', 1) AS sale_adhoc_reference_key,
+    IBM_TRACKING_NUMBER AS sale_tracking_number,
+    IBM_Standard_Carrier_Alpha_Code AS sale_scac,
+    IBM_sale_loading_zoning AS sale_loading_zoning,
+    IBM_sale_unloading_zoning AS sale_unloading_zoning,
+    IBM_BUYER_ACCOUNT_CODE AS sale_buyer_account_code,
+    IBM_delivery_note_number AS sale_delivery_note_number,
+    IBM_Dispatch_Advice AS sale_dispatch_advice,
+    If(IBM_IOT_Flag<>1, 0, 1) AS sale_iot_flag,
+    IBM_Geodis_Product_Code AS sale_geodis_product_code_ibm,
+    IBM_Freight_Charge AS sale_freight_charge_ddb,
+    IBM_Carrier_Identifier AS sale_carrier_identifier,
+    IBM_Hybrid_Process_Level AS sale_hybrid_process_level,
+    IBM_CSO_Carrier_Weight AS sale_specific_info_weight,
+    IBM_Miles AS sale_miles,
+    IBM_Order_Type AS sale_order_type,
+    IBM_Service_TYPE AS sale_specific_info_service_type,
+    IBM_Critical_Shipment as sale_critical_shipment,
+    IBM_freight_method as sale_freight_method
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_Sale_Service_IBM.qvd] (qvd)
+where len(trim(sale_service_id)) > 1;
+
+
+Kyndry_spe:
+left keep(sale_basic)
+LOAD DISTINCT
+    Kyndryl_Sale_Service_id as sale_service_id,
+    Kyndryl_Sale_Service_House_Air_Way_Bill AS sale_hawb,
+    Kyndryl_Sale_Service_Customer_House_Air_Way_Bill As sale_cuhawb,
+    Kyndryl_Sale_Service_Delivery_Note_Number AS sale_delivery_note_number,
+    Kyndryl_Sale_Service_Dispatch_Advice AS sale_dispatch_advice,
+    Kyndryl_Sale_Service_Carrier_weight AS sale_specific_info_weight,
+    Kyndryl_Sale_Service_Standard_Carrier_Alpha_Code AS sale_scac,
+    Kyndryl_Sale_Service_Ship_from_code AS sale_ship_from_code,
+    Kyndryl_Sale_Service_Ship_to_code AS sale_ship_to_code,
+    Kyndryl_Sale_Service_IBM_requested_Service AS sale_requested_service,
+    Kyndryl_Sale_Service_Customer_Adhoc_Reference AS sale_adhoc_reference,
+    'RR'&Subfield(Subfield(Kyndryl_Sale_Service_Customer_Adhoc_Reference, 'RR', 2), ' ', 1) AS sale_adhoc_reference_key,
+    Kyndryl_Sale_Service_Buyer_Account_Code AS sale_buyer_account_code,
+    Kyndryl_Sale_Service_Tracking_number AS sale_tracking_number,
+    Kyndryl_Sale_Service_Carrier_identifier AS sale_carrier_identifier,
+    Kyndryl_Sale_Service_IBM_order_type as sale_order_type,
+    Kyndryl_Sale_Service_IBM_service_type as sale_specific_info_service_type,
+    Kyndryl_Sale_Service_Miles as sale_miles,
+    Kyndryl_Sale_Service_Critical_flag AS sale_critical_shipment,
+    Kyndryl_Sale_Service_Way_of_Transport as sale_specific_info_mot
+
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_Kyndryl.qvd] (qvd)
+where len(trim(Kyndryl_Sale_Service_id)) <> 0 ;
+
+concatenate(sale_service_specific_data)
+Load  distinct
+    *
+resident Kyndry_spe;
+
+drop table Kyndry_spe;
+
+bp_spe:
+left keep(sale_basic)
+LOAD
+
+    sale_service_id,
+    BP_SHO_ModeOfTransport as sale_specific_info_mot
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_Sale_Service_BP.qvd]
+(qvd);
+
+concatenate(sale_service_specific_data)
+Load  distinct
+    *
+resident bp_spe;
+
+drop table bp_spe;
+
+
+Align_zenith_spe:
+left keep(sale_basic)
+LOAD DISTINCT
+    sale_service_id,
+    "Align_sale_service_House Air Way Bill" AS sale_hawb,
+    "Align_sale_service_Customer House Air Way Bill" As sale_cuhawb,
+    "Align_sale_service_Delivery Note Number" AS sale_delivery_note_number,
+    "Align_sale_service_Dispatch Advice" AS sale_dispatch_advice,
+    "Align_sale_service_Carrier weight" AS sale_specific_info_weight,
+    "Align_sale_service_Standard Carrier Alpha Code" AS sale_scac,
+    "Align_sale_service_Ship from code" AS sale_ship_from_code,
+    "Align_sale_service_Ship to code" AS sale_ship_to_code,
+    "Align_sale_service_IBM requested Service" AS sale_requested_service,
+    "Align_sale_service_Customer Adhoc Reference" AS sale_adhoc_reference,
+    'RR'&Subfield(Subfield("Align_sale_service_Customer Adhoc Reference", 'RR', 2), ' ', 1) AS sale_adhoc_reference_key,
+    "Align_sale_service_Buyer Account Code" AS sale_buyer_account_code,
+    "Align_sale_service_Tracking number" AS sale_tracking_number,
+    "Align_sale_service_Carrier identifier" AS sale_carrier_identifier,
+    "Align_sale_service_Critical flag" as sale_critical_shipment
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_Align.qvd] (qvd)
+where len(trim(sale_service_id)) > 1
+and Align_sale_service_app_source = 'Zenith';
+
+left join(Align_zenith_spe)
+load distinct 
+    sale_service_id,
+    sale_executed_SLA as sale_specific_info_SLA,
+    if(sale_service_nature = 'TFCL','SEA',
+        if(sale_service_nature = 'TAIR','AIR',
+            if(sale_service_nature = 'TFTL','ROAD',sale_service_nature))) as sale_specific_info_mot,
+
+    sale_executed_SLA as sale_specific_info_service_type,
+    1 as flag
+
+resident sale_basic;
+
+concatenate(sale_service_specific_data)
+Load  distinct
+    *
+resident Align_zenith_spe
+where len(trim(sale_service_id)) > 1;
+
+drop table Align_zenith_spe;
+
+Align_mpo_spe:
+left keep(sale_basic)
+LOAD DISTINCT
+    sale_service_id,
+    ALIGN_sale_service_reference_9 AS sale_hawb,
+    ALIGN_sale_service_serviceTypeALIGN as sale_specific_info_service_type,
+    ALIGN_sale_service_serviceTypeALIGN as sale_specific_info_SLA,
+    ALIGN_sale_service_SCAC_ALIGN as sale_scac,
+    ALIGN_sale_service_reference_9 AS sale_cuhawb,
+    ALIGN_sale_service_reference_9 AS sale_tracking_number,
+    ALIGN_sale_service_SCAC_ALIGN AS sale_carrier_identifier,
+    ALIGN_sale_service_deliveryTermALIGN as sale_requested_service,
+    ALIGN_sale_service_POnumber as sale_buyer_account_code,
+    ALIGN_sale_service_ModeOfTransport as sale_specific_info_mot
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_Align.qvd] (qvd)
+where Align_sale_service_app_source = 'MPO'
+;
+
+concatenate(sale_service_specific_data)
+Load  distinct
+    *
+resident Align_mpo_spe;
+
+drop table Align_mpo_spe;
+
+
+
+new_cu_spe:
+LEFT keep(sale_basic)
+LOAD Distinct
+
+    sale_service_id,
+    Sale_Service_NEWCUS_House_Air_Way_Bill as sale_hawb,
+    Sale_Service_NEWCUS_Tracking_Number as sale_tracking_number,
+    Sale_Service_NEWCUS_Customer_House_Airway_Bill as sale_cuhawb,
+    Sale_Service_NEWCUS_Standard_Carrier_Alpha_Code as sale_scac
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_NEWCUS.qvd]
+(qvd);
+
+concatenate(sale_service_specific_data)
+Load  distinct
+    *
+resident new_cu_spe;
+
+drop table new_cu_spe;
+
+HID_specific_info:
+left keep(sale_basic)
+LOAD
+    sale_service_id,
+    //sale_service_HID_reference_1,
+    //sale_service_HID_reference_2,
+    //sale_service_HID_reference_3,
+    //sale_service_HID_reference_4,
+    //sale_service_HID_reference_5,
+    //sale_service_HID_reference_6,
+    //sale_service_HID_reference_7,
+    //sale_service_HID_reference_8,
+    //sale_service_HID_reference_9,
+    //sale_service_HID_reference_10,
+    sale_service_HID_ModeOfTransport as sale_specific_info_mot
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_HID.qvd]
+(qvd);
+
+concatenate(sale_service_specific_data)
+Load  distinct
+    *
+resident HID_specific_info;
+
+drop table HID_specific_info;
+
+
+solidigm_spe:
+LEFT keep(sale_basic)
+LOAD
+
+    SOLIDIGM_Sale_Service_systemid as sale_service_system_id,
+    SOLIDIGM_Sale_Service_Shipment_Information_PONumber as sale_sh_po_number,
+    SOLIDIGM_Sale_Service_For3B12C_OrderReference as sale_order_reference,
+    SOLIDIGM_sale_service_PONumber as sale_po_number,
+    SOLIDIGM_sale_service_routeNumber as sale_route_number,
+    SOLIDIGM_sale_service_consolidation_key as sale_hawb,
+    SOLIDIGM_sale_service_ModeOfTransport as sale_specific_info_mot
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_SOLIDIGM.qvd]
+(qvd)
+where len(trim(SOLIDIGM_Sale_Service_systemid)) > 1;
+
+left join(solidigm_spe)
+load 
+    sale_service_system_id,
+    sale_service_id
+
+resident sale_basic;
+
+drop field sale_service_system_id from solidigm_spe;
+
+
+concatenate(sale_service_specific_data)
+Load  distinct
+    *
+resident solidigm_spe;
+
+drop table solidigm_spe;
+
+
+computa_spe:
+LEFT keep(sale_basic)
+LOAD
+
+    COMPUTACENTER_sale_service_systemid as sale_service_system_id,
+//     COMPUTACENTER_sale_service_reference_1,
+//     COMPUTACENTER_sale_service_reference_2,
+//     COMPUTACENTER_sale_service_reference_3,
+//     COMPUTACENTER_sale_service_reference_4,
+     COMPUTACENTER_sale_service_reference_5 as sale_hawb,
+     COMPUTACENTER_sale_service_carrierConfirmedWeight AS sale_specific_info_weight,
+     COMPUTACENTER_sale_service_zoneFreight as sale_freight_zone
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_COMPUTACENTER.qvd]
+(qvd);
+
+left join(computa_spe)
+load 
+    sale_service_system_id,
+    sale_service_id
+
+resident sale_basic;
+
+drop field sale_service_system_id from computa_spe;
+
+
+concatenate(sale_service_specific_data)
+Load  distinct
+    *
+resident computa_spe;
+
+drop table computa_spe;
+
+
+
+
+white_glove:
+left keep(sale_basic)
+LOAD
+    sale_service_id,
+//     WHITE_GLOVE_sale_service_reference_1,
+//     WHITE_GLOVE_sale_service_reference_2,
+//     WHITE_GLOVE_sale_service_reference_3,
+//     WHITE_GLOVE_sale_service_reference_4,
+//     WHITE_GLOVE_sale_service_reference_5 
+//     WHITE_GLOVE_sale_service_reference_6,
+//     WHITE_GLOVE_sale_service_reference_7,
+//     WHITE_GLOVE_sale_service_reference_8,
+    WHITE_GLOVE_sale_service_reference_9 as sale_hawb
+//     WHITE_GLOVE_sale_service_reference_10,
+//     WHITE_GLOVE_sale_service_bill_to_party_id,
+//     WHITE_GLOVE_sale_service_bill_to_name,
+//     WHITE_GLOVE_sale_service_bill_to_name2,
+//     WHITE_GLOVE_sale_service_bill_to_address,
+//     WHITE_GLOVE_sale_service_bill_to_address2,
+//     WHITE_GLOVE_sale_service_bill_to_city,
+//     WHITE_GLOVE_sale_service_bill_to_postal_code,
+//     WHITE_GLOVE_sale_service_bill_to_region_state,
+//     WHITE_GLOVE_sale_service_bill_to_country_code,
+//     WHITE_GLOVE_sale_service_businessUnit,
+//     WHITE_GLOVE_Sale_Service_app_source,
+//     WHITE_GLOVE_Sale_Service_record_date
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_WHITE_GLOVE.qvd]
+(qvd);
+
+concatenate(sale_service_specific_data)
+Load  distinct
+    *
+resident white_glove;
+
+drop table white_glove;
+
+
+[sale_number_HAWB]:
+left join(sale_service_specific_data)
+Load distinct
+    sale_hawb,
+    count(distinct sale_service_id) as sale_id_hawb_qty
+
+resident [sale_service_specific_data] group by sale_hawb;

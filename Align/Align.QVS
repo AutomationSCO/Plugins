@@ -1,0 +1,193 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Align/0.1 Main_align.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/4. HU_Items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/5. align_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/18. invoice_line.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/23. full_FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/26. sale_finance_service_tariff_items.qvs]); 
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/57. eorder_shipment_inner.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/65. sale_last_be.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/77. eorder_shipment_align.qvs]);
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/31. net_on_time.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/76. DIMC_inner.qvs]);
+
+[align_specific_data]:
+left join(sale_basic)
+LOAD
+    sale_service_id,
+    if(sale_service_nature = 'TFTL', sale_executed_SLA, sale_service_nature) as Align_priority,
+    Year(sale_start_date)&'-'&Month(sale_start_date) as Join_Date,
+    if(monthend(sale_start_date)<=monthend('$(vToday)'),'Yes','No') as Show_Forecast,
+    RowNo() as Registro
+    
+    
+RESIDENT sale_basic;
+
+
+[Align_Adhoc]:
+Left Keep([sale_basic])
+ LOAD
+    sale_service_id,
+    if(sale_tariff_item = 'AD HOC USD',1,0) as [Adhoc Check]
+
+resident sale_tariff_items
+WHERE match(sale_tariff_item,'AD HOC USD');
+
+
+
+
+
+//Manual Input ---------------------------------------------------------------------------------------------
+[manual_input]:
+left keep (sale_basic)
+LOAD Distinct
+    CSO as sale_service_id,
+    //"Request Date & Time", // Created at eorder
+    "Sent to carrier" as align_manual_sent_to_carrier,
+    "Acknowledge Carrier" as align_manual_ack_carrier,
+    Comments as align_manual_comments
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/Align/Align Domestic PU Manual Data.xlsx]
+(ooxml, embedded labels, table is [Align info]);
+
+Extra_info_report:
+left keep(sale_basic)
+LOAD
+    //"Creation Date",
+    //"Align Reference",
+    "GEODIS Reference" as sale_service_id,
+    "CWT total (kg)" as external_chargeable_weight,
+    "Pallet QTY" as external_pallet_qty,
+    "Containers QTY" as external_container_qty
+FROM [lib://Geo_AMS/LogisticsAnalyst/Align/ALIGN Report Source.xlsx]
+(ooxml, embedded labels, table is Hoja1);
+
+
+Forecast:
+LOAD
+    Date_Forecast as Join_Date,   
+    "Forecast FTL",
+    "Forecast LTL",
+    "Forecast Air",
+    "Forecast Ocean",
+    "Forecast Air 2H21",
+    "Forecast Ocean 2H21"
+FROM [lib://Geo_AMS/LogisticsAnalyst/Align/Forecast.xlsx]
+(ooxml, embedded labels, table is Forecast);
+
+
+//missing RCs -------------------------------------------------------------------------------------
+missing_rc:
+noconcatenate
+load
+
+    sale_service_id
+
+resident sale_basic;
+
+
+left join(missing_rc)
+load distinct
+    sale_service_id,
+    pickup_reason_code_status
+
+resident pu_net_kpi;
+
+
+left join(missing_rc)
+load distinct
+    sale_service_id,
+    delivery_reason_code_status
+
+resident del_net_kpi;
+
+Store [missing_rc] into [lib://Geo_AMS/Automation\BI\Plugins/Reports/missing_rc.csv](txt);
+
+drop table missing_rc;
+
+//------------------------------------------------------------------------------
+conteiner_availability:
+left keep(sale_basic)
+LOAD
+    "Shipment ID" as hu_reference,
+    "Type of Load" as conteiner_av_type_of_load,
+    date("Pickup Request Date") as conteiner_av_pu_request_date,
+    date("Actual Arrival at Port Date") as conteiner_av_actual_arrival_at_port_date
+FROM [lib://Geo_AMS/CoE_GDL/Global OPS/Align/Container Availability at Pick-up.xlsx]
+(ooxml, embedded labels, table is APAC);
+
+ams_temp:
+left keep(sale_basic)
+LOAD
+    "Shipment ID" as hu_reference,
+    "Type of Load" as conteiner_av_type_of_load,
+    date("Pickup Request Date") as conteiner_av_pu_request_date,
+    date("Actual Arrival at Port Date") as conteiner_av_actual_arrival_at_port_date
+FROM [lib://Geo_AMS/CoE_GDL/Global OPS/Align/Container Availability at Pick-up.xlsx]
+(ooxml, embedded labels, table is AMS);
+
+concatenate(conteiner_availability)
+load
+    *
+resident ams_temp;
+
+drop table ams_temp;
+
+emea_temp:
+left keep(sale_basic)
+LOAD
+    "Shipment ID" as hu_reference,
+    "Type of Load" as conteiner_av_type_of_load,
+    date("Pickup Request Date") as conteiner_av_pu_request_date,
+    date("Actual Arrival at Port Date") as conteiner_av_actual_arrival_at_port_date
+FROM [lib://Geo_AMS/CoE_GDL/Global OPS/Align/Container Availability at Pick-up.xlsx]
+(ooxml, embedded labels, table is EMEA);
+
+concatenate(conteiner_availability)
+load
+    *
+resident emea_temp;
+
+drop table emea_temp;
+
+el_paso:
+LOAD
+    "Crossdock Ref",
+    "G# International",
+    "G# Crossborder",
+    SHO,
+    "SO",
+    "South/North",
+    Container#,
+    "IT/7512",
+    "Greenlight Align",
+    Bond,
+    "Carta Porte",
+    "Information Carrier",
+    "Item Detail",
+    "ETA TO PT",
+    Received,
+    Processed,
+    "Pieces (Arrival)",
+    "Pieces(Required)",
+    "Pieces (Departure)",
+    "Trailer #",
+    "Pick Up Date",
+    "Dates at processing",
+    "Required Date",
+    "Arrival at Align",
+    "Hour of Discharge",
+    POD,
+    Damage,
+    Lost,
+    Comments
+FROM [lib://Geo_AMS/Automation/Align_WH_KPIs/Forecast CROSSBORDER JRZELP.xlsx]
+(ooxml, embedded labels, table is Hoja1)
+where len(Received) > 0;
+
+
+exit script;

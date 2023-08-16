@@ -1,0 +1,109 @@
+$(Must_Include=[lib://Geo_AMS/LogisticsAnalyst/Plugins/1.0 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+perfect_order_historical_temp:
+noconcatenate
+Load distinct
+
+    sale_service_id,
+    sale_control_point,
+    data_owner,
+    scope,
+    report_day
+
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/Perfect Order/perfect_order_store.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq)
+where sale_service_id <> '';
+
+concatenate(perfect_order_historical_temp)
+load distinct
+    sale_service_id,
+    sale_control_point,
+    data_owner,
+    scope,
+    date(today ()) as report_day
+From [lib://Geo_AMS/Automation/BI/Plugins/Reports/Perfect Order/perfect_order_current.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq)
+where sale_service_id <> '';
+
+perfect_order_historical:
+noconcatenate
+load distinct 
+
+    sale_service_id,
+    sale_control_point,
+    data_owner,
+    scope,
+    date(report_day) as report_day
+
+resident perfect_order_historical_temp;
+
+drop table perfect_order_historical_temp;
+
+
+Store [perfect_order_historical] into [lib://Geo_AMS/Automation/BI/Plugins/Reports/Perfect Order/perfect_order_store.csv] (txt);
+
+drop table perfect_order_historical;
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Perfect Order/Perfect Order Open.qvs]);
+
+Disputes:
+left keep(sale_basic)
+load distinct
+    CSO as sale_service_id,
+    Category as finance_disputes_category
+    
+FROM [lib://Geo_AMS/Automation/BI/Finance/Disputes/Disputes.xlsx]
+(ooxml, embedded labels, table is [Consolidado Disputes]);
+
+perfect_order_historical:
+left keep(perfect_order)
+Load distinct
+
+    //sale_service_id,
+    sale_control_point as po_historical_control_point,
+    data_owner as po_historical_data_owner,
+    scope as po_hisotrical_scope,
+    date(report_day) as po_hisotrical_report_day,
+    sale_service_id & data_owner & sale_control_point as po_id
+
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/Perfect Order/perfect_order_store.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq)
+where sale_service_id <> '';
+
+
+live_aging_temp:
+Load distinct
+    po_id,
+    max(po_hisotrical_report_day) as po_max_report_date
+
+resident perfect_order_historical group by po_id;
+
+left join(live_aging_temp)
+load distinct
+    sale_service_id,
+    po_id
+resident perfect_order;
+
+
+
+left join(live_aging_temp)
+load distinct
+    sale_service_id,
+    sale_creation_date,
+    sale_actual_end_date
+
+resident sale_basic;
+
+live_aging:
+noconcatenate
+load distinct
+    po_id,
+    po_max_report_date,
+    po_max_report_date - sale_actual_end_date as po_live_aging_gross,
+    po_max_report_date - sale_actual_end_date as po_live_aging,
+    if(sale_actual_end_date <= po_max_report_date,'Perfect','No Perfect') as po_kpi
+
+resident live_aging_temp;
+
+drop table live_aging_temp;

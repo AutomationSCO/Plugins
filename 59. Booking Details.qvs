@@ -1,0 +1,175 @@
+﻿//Booking_Details---------------------------------------------------------------------------------------------------
+
+Map_for_Booking:
+
+mapping
+LOAD
+    IATA,
+    "GDL Value"
+FROM [lib://Geo_AMS/LogisticsAnalyst/Outbound/Booking details Template.xlsx]
+(ooxml, embedded labels, table is Data);
+
+
+
+
+
+//Booking Details Historico --------------------------------------------------------------------------------------------------
+[Booking_Details_hist]:
+left keep(sale_basic)
+LOAD
+    CSO as sale_service_id,
+    1 as booking_details_flag,
+    //     'Yes' as historical,
+    Hub1&Flight1&ETD1&"ETD1 H"&ETA2&"ETA2 H"&Hub2 as booking_details_Booking_Key,
+    MAWB as booking_details_MAWB,
+
+    Hub1 as booking_details_Hub1,
+    Flight1 as booking_details_Flight1,
+    ETD1 as booking_details_ETD1,
+    "ETD1 H" as booking_details_ETD1H,
+    ETA2 as booking_details_ETA2,
+    "ETA2 H" as booking_details_ETA2H,
+    Hub2 as booking_details_Hub2,
+    Flight2 as booking_details_Flight2,
+    ETD2 as booking_details_ETD2,
+    "ETA2 H" as booking_details_ETD2H,
+
+    ETA3 as booking_details_ETA3,
+    "ETA3 H" as booking_details_ETA3H,
+    Hub3 as booking_details_Hub3,
+    Flight3 as booking_details_Flight3,
+    ETD3 as booking_details_ETD3,
+    "ETA3 H" as booking_details_ETD3H,
+    ETA4 as booking_details_ETA4,
+    "ETA4 H" as booking_details_ETA4H,
+    Hub4 as booking_details_Hub4,
+    Flight4 as booking_details_Flight4,
+    ETD4 as booking_details_ETD4,
+    "ETA3 H" as booking_details_ETD4H,
+    ETA5 as booking_details_ETA5,
+    "ETA5 H" as booking_details_ETA5H,
+    Hub5 as booking_details_Hub5,
+    "First Port" as booking_details_FirstPort,
+    "First ETD" as booking_details_FirstETD,
+    "First ETDH" as booking_details_FirstETDH,  
+    "Last Port" as booking_details_LastPort,
+    "Last ETA" as booking_details_LastETA,
+    "Last ETAH" as booking_details_LastETAH,
+
+
+    "Last ETA" as booking_details_last_eta,
+    "Last ETAH" as booking_details_last_etah,
+    date(floor(ATD)) as booking_details_ATD,
+    if(match(WeekDay("Last ETA"),'Fri','Sat','Sun'),1)  as booking_details_ETA_Weekend_Shipment,
+    if(match(WeekDay(ATA),'Fri','Sat','Sun'),1)  as booking_details_ATA_Weekend_Shipment,
+    date(floor(ATA)) as booking_details_ATA,
+    Status as booking_details_status,
+    
+    "Val Port" as booking_details_valport,
+    Rebooked as booking_details_rebooked,
+    num([HU airpt to hub]) as booking_details_hu_airpt_to_hub,
+    "Exception Detail" as booking_details_Exception_Detail,
+    Hub1 & '-' & Hub2 & '-' & Hub3 & '-' & Hub4 as booking_details_inter_routing,
+//     "ETD1 G" as "ETD1 G Original",
+    IF(len(Hub1)=0,'Not booked',Timestamp(ETD1+"ETD1 H"+applymap('Map_for_Booking',Hub1))) as booking_details_ETD1G,
+//     "ETA2 G" as "ETA2 G Original",
+    IF(len(ETD1)=0,'Not booked',Timestamp(ETA2+"ETA2 H"+applymap('Map_for_Booking',Hub2))) as booking_details_ETA2G,
+//     "ETD2 G" as "ETD2 G Original" ,
+    IF(len(ETD2)=0,'No more legs',Timestamp(ETD2+"ETD2 H"+applymap('Map_for_Booking',Hub2))) as booking_details_ETD2G,
+//     "ETA3 G" as "ETA3 G Original" ,
+    IF(len(ETD2)=0,'No more legs',Timestamp(ETA3+"ETA3 H"+applymap('Map_for_Booking',Hub3))) as booking_details_ETA3G,
+//     "ETD3 G" as "ETD3 G Original",
+    IF(len(ETD3)=0,'No more legs',Timestamp(ETD3+"ETD3 H"+applymap('Map_for_Booking',Hub3))) as booking_details_ETD3G,
+//     "ETA4 G" as "ETA4 G Original",
+    IF(len(ETD3)=0,'No more legs',Timestamp(ETA4+"ETA4 H"+applymap('Map_for_Booking',Hub4))) as booking_details_ETA4G,
+//     "ETD4 G" as "ETD4 G Original",
+    IF(len(ETD4)=0,'No more legs',Timestamp(ETD4+"ETD4 H"+applymap('Map_for_Booking',Hub4))) as booking_details_ETD4G,
+//     "ETA5 G" as "ETA5 G Original" ,
+    IF(len(ETD4)=0,'No more legs',Timestamp(ETA5+"ETA5 H"+applymap('Map_for_Booking',Hub5))) as booking_details_ETA5G
+
+    
+FROM [lib://Geo_AMS/LogisticsAnalyst/Outbound/Booking Details Histórico.xlsx]
+(ooxml, embedded labels, table is Hoja1);
+
+[Booking_Details_temp]:
+Left keep(sale_basic)
+LOAD distinct
+    CSO as sale_service_id,
+    1 as booking_details_flag,
+    //     'Yes' as historical,
+    Hub1&Flight1&ETD1&"ETD1 H"&ETA2&"ETA2 H"&Hub2 as booking_details_Booking_Key,
+    MAWB as booking_details_MAWB,
+    Hub1 as booking_details_Hub1,
+    Flight1 as booking_details_Flight1,
+    ETD1 as booking_details_ETD1,
+    "ETD1 H" as booking_details_ETD1H,
+    ETA2 as booking_details_ETA2,
+    "ETA2 H" as booking_details_ETA2H,
+    Hub2 as booking_details_Hub2,
+    Flight2 as booking_details_Flight2,
+    ETD2 as booking_details_ETD2,
+    "ETD2 H" as booking_details_ETD2H,
+    ETA3 as booking_details_ETA3,
+    "ETA3 H" as booking_details_ETA3H,
+    Hub3 as booking_details_Hub3,
+    Flight3 as booking_details_Flight3,
+    ETD3 as booking_details_ETD3,
+    "ETD3 H" as booking_details_ETD3H,
+    ETA4 as booking_details_ETA4,
+    "ETA4 H" as booking_details_ETA4H,
+    Hub4 as booking_details_Hub4,
+    Flight4 as booking_details_Flight4,
+    ETD4 as booking_details_ETD4,
+    "ETD4 H" as booking_details_ETD4H,
+    ETA5 as booking_details_ETA5,
+    "ETA5 H" as booking_details_ETA5H,
+    Hub5 as booking_details_Hub5,
+    "First Port" as booking_details_FirstPort,
+    "First ETD" as booking_details_FirstETD,
+    "First ETDH" as booking_details_FirstETDH,  
+    "Last Port" as booking_details_LastPort,
+    "Last ETA" as booking_details_LastETA,
+    "Last ETAH" as booking_details_LastETAH,
+
+
+    "Last ETA" as booking_details_last_eta,
+    "Last ETAH" as booking_details_last_etah,
+    date(floor(ATD)) as booking_details_ATD,
+    if(match(WeekDay("Last ETA"),'Fri','Sat','Sun'),1)  as booking_details_ETA_Weekend_Shipment,
+    if(match(WeekDay(ATA),'Fri','Sat','Sun'),1)  as booking_details_ATA_Weekend_Shipment,
+    date(floor(ATA)) as booking_details_ATA,
+    Status as booking_details_status,
+    
+    "Val Port" as booking_details_valport,
+    Rebooked as booking_details_rebooked,
+    "Exception Detail" as booking_details_Exception_Detail,
+    num([HU airpt to hub])  as booking_details_hu_airpt_to_hub,
+    Hub1 & '-' & Hub2 & '-' & Hub3 & '-' & Hub4 as booking_details_inter_routing,
+//     "ETD1 G" as "ETD1 G Original",
+    IF(len(Hub1)=0,'Not booked',Timestamp(ETD1+"ETD1 H"+applymap('Map_for_Booking',Hub1))) as booking_details_ETD1G,
+//     "ETA2 G" as "ETA2 G Original",
+    IF(len(ETD1)=0,'Not booked',Timestamp(ETA2+"ETA2 H"+applymap('Map_for_Booking',Hub2))) as booking_details_ETA2G,
+//     "ETD2 G" as "ETD2 G Original" ,
+    IF(len(ETD2)=0,'No more legs',Timestamp(ETD2+"ETD2 H"+applymap('Map_for_Booking',Hub2))) as booking_details_ETD2G,
+//     "ETA3 G" as "ETA3 G Original" ,
+    IF(len(ETD2)=0,'No more legs',Timestamp(ETA3+"ETA3 H"+applymap('Map_for_Booking',Hub3))) as booking_details_ETA3G,
+//     "ETD3 G" as "ETD3 G Original",
+    IF(len(ETD3)=0,'No more legs',Timestamp(ETD3+"ETD3 H"+applymap('Map_for_Booking',Hub3))) as booking_details_ETD3G,
+//     "ETA4 G" as "ETA4 G Original",
+    IF(len(ETD3)=0,'No more legs',Timestamp(ETA4+"ETA4 H"+applymap('Map_for_Booking',Hub4))) as booking_details_ETA4G,
+//     "ETD4 G" as "ETD4 G Original",
+    IF(len(ETD4)=0,'No more legs',Timestamp(ETD4+"ETD4 H"+applymap('Map_for_Booking',Hub4))) as booking_details_ETD4G,
+//     "ETA5 G" as "ETA5 G Original" ,
+    IF(len(ETD4)=0,'No more legs',Timestamp(ETA5+"ETA5 H"+applymap('Map_for_Booking',Hub5))) as booking_details_ETA5G
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/Outbound/Booking details Template.xlsx]
+(ooxml, embedded labels, table is Hoja1);
+
+
+Concatenate([Booking_Details_temp])
+load
+    *
+resident [Booking_Details_hist];
+
+Drop Table [Booking_Details_hist];
+

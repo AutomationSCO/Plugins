@@ -1,0 +1,15 @@
+﻿master_date:
+noconcatenate
+LOAD
+	sale_service_id,
+    sale_actual_start_date as sale_actual_master_date,
+    'Start' as sale_master_date_type
+resident sale_basic;
+
+
+concatenate(master_date)
+LOAD
+	sale_service_id,
+    sale_actual_end_date as sale_actual_master_date,
+    'End' as sale_master_date_type
+resident sale_basic;

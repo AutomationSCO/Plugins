@@ -1,0 +1,113 @@
+// 1. Due Pickups 2. Due Deliveries ------------------------------------------------------------------------------------------------ 
+
+[cp_due_pickup_due_delivery_temp]:
+Load distinct
+    sale_service_id,
+    sale_be_af_flag,
+    sale_be_d_flag,
+    sale_planned_start_date,
+    sale_planned_end_date,
+    sale_service_execution_followup,
+    sale_start_geo,
+    sale_end_geo    
+
+
+resident sale_basic
+where not match(sale_service_short_name,'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP')
+and not match(sale_service_execution_followup,'NAP')
+and not match(net_flag,1);
+
+left join(cp_due_pickup_due_delivery_temp)
+load distinct
+    sale_service_id,
+    sale_buy_id
+resident [sale-buy];
+
+
+CP_Netting_PU:
+left join(cp_due_pickup_due_delivery_temp)
+LOAD
+    CSO as sale_service_id,
+    'Yes' as CP_PU_Net
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'PU';
+
+CP_Netting_DEL:
+left join (cp_due_pickup_due_delivery_temp)
+LOAD
+    CSO as sale_service_id,
+    'Yes' as CP_DEL_Net
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'Del';
+
+
+[cp_due_pickup_due_delivery]:
+Load distinct
+    sale_service_id,
+    sale_buy_id,
+    CP_PU_Net,
+    CP_DEL_Net,
+
+    if(CP_PU_Net = 'Yes','Picked Up',
+        if((sale_be_af_flag = 1 and match(sale_service_execution_followup,'CD','CL') and match(sale_start_geo,'AMS')) or (match(sale_service_execution_followup,'CD','CL') and not match(sale_start_geo,'AMS')) or match(sale_service_execution_followup,'STARTED','FINISHED'),'Picked Up',
+            if((NetWorkDays(sale_planned_start_date, '$(vToday)')-1)<0,'Future',
+                if((NetWorkDays(sale_planned_start_date,'$(vToday)')-1)=0,'Today',
+                    if((NetWorkDays(sale_planned_start_date,'$(vToday)')-1)=1,'1 Day',
+                        if((NetWorkDays(sale_planned_start_date,'$(vToday)')-1)=2,'2 Days',                
+                            if((NetWorkDays(sale_planned_start_date,'$(vToday)')-1)>=2,'2+ Days'))))))) as cp_due_pickup_bracket,
+
+        if(CP_PU_Net = 'Yes','Picked Up',
+        if((sale_be_af_flag = 1 and match(sale_service_execution_followup,'CD','CL') and match(sale_start_geo,'AMS')) or (match(sale_service_execution_followup,'CD','CL') and not match(sale_start_geo,'AMS')) or match(sale_service_execution_followup,'STARTED','FINISHED'),'Picked Up',
+            if((NetWorkDays(sale_planned_start_date, '$(vToday)')-1)<0,'Future',
+                if((NetWorkDays(sale_planned_start_date,'$(vToday)')-1)=0,'Today','Due')))) as cp_due_pickup,
+    
+
+    if(CP_DEL_Net = 'Yes','Delivered',
+        if((sale_be_d_flag = 1 and match(sale_service_execution_followup,'CL') and match(sale_end_geo,'AMS')) or (match(sale_service_execution_followup,'CL')and not match(sale_end_geo,'AMS')) or match(sale_service_execution_followup,'FINISHED'),'Delivered',
+            if((NetWorkDays(sale_planned_end_date,'$(vToday)')-1) < 0,'Future',
+                if((NetWorkDays(sale_planned_end_date,'$(vToday)')-1) = 0,'Today',
+                    if((NetWorkDays(sale_planned_end_date,'$(vToday)')-1)=1,'1 Day',
+                        if((NetWorkDays(sale_planned_end_date,'$(vToday)')-1)=2,'2 Days',
+                            if((NetWorkDays(sale_planned_end_date,'$(vToday)')-1)>=2,'2+ Days'))))))) as cp_due_delivery_bracket,
+
+        if(CP_DEL_Net = 'Yes','Delivered',
+        if((sale_be_d_flag = 1 and match(sale_service_execution_followup,'CL') and match(sale_end_geo,'AMS')) or (match(sale_service_execution_followup,'CL')and not match(sale_end_geo,'AMS')) or match(sale_service_execution_followup,'FINISHED'),'Delivered',
+            if((NetWorkDays(sale_planned_end_date,'$(vToday)')-1) < 0,'Future',
+                if((NetWorkDays(sale_planned_end_date,'$(vToday)')-1) = 0,'Today','Due')))) as cp_due_delivery
+
+resident cp_due_pickup_due_delivery_temp;
+
+drop table cp_due_pickup_due_delivery_temp;
+
+
+[cp_due_pickup_due_delivery_report]:
+noconcatenate
+Load distinct
+    *,
+    today() as report_date
+
+resident cp_due_pickup_due_delivery
+where not match(cp_due_pickup_bracket,'Picked Up')
+or not match(cp_due_delivery_bracket,'Delivered');
+
+
+
+
+left join(cp_due_pickup_due_delivery_report)
+Load distinct
+    sale_buy_id,
+    PU_Analyst,
+    PU_Team_Responsible,
+    Del_Analyst,
+    Del_Team_Responsible
+
+resident Owners;
+
+
+Store [cp_due_pickup_due_delivery_report] into [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/current_dues_4pl.csv](txt);
+
+drop table cp_due_pickup_due_delivery_report;
+
+drop field sale_buy_id from cp_due_pickup_due_delivery;

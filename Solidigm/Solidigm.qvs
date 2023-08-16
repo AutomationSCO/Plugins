@@ -1,0 +1,420 @@
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Solidigm/0.1 Main Solidigm.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/57. eorder_shipment_inner.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/58. eorder_order_inner.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/10. ST.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/12. Specific_data_all_clients_buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/15. Sale_FirstBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/21. eorder_HU.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/24. full_ST.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/26. sale_finance_service_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/27. buy_finance_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/33. eorder_hu_item.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/35. solidigm_sale_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/39. eorder_shipment_solidigm.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/44. sale_first_be_sort.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/45. solidigm_order_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/46. solidigm_buy_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/65. sale_last_be.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/66. sale_last_be_sort.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/71. supplier_invoice.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/73. solidigm_orderline.qvs]);
+
+
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/7. timeliness_completeness.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/24. buy_missing_hawb.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/25. buy_chargeable_weight.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/36. incorrect_consolidation.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/37. cp_duplicate_order.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/42. global_spm.qvs]);
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Team/6. solidigm_kpis.qvs]);
+
+
+//-----------------------------------------------------------------------------------
+//Precall
+left join(sale_last_be)
+load distinct
+    sale_service_id,
+    sale_lastbe_actual_datetime as sale_event_precall_actual_date,
+    sale_lastbe_estimated_datetime as sale_event_estimated_precall_date
+
+resident sale_last_be
+where match(sale_lastbe_event_code,'E45');
+//--------------------------------------------------------------------------------------------
+current_dn:
+NoConcatenate
+LOAD
+    external_id as hu_reference,
+    Origin as solidigm_current_Origin,
+	requested_quantity as solidigm_current_requested_quantity,
+	available_quantity as solidigm_current_available_quantity,
+    unit_type as solidigm_current_unit_type,
+    date_pickup_from as solidigm_current_date_pickup_from,
+    Ship_to_name as solidigm_current_Ship_to_name,
+    ship_from_city as solidigm_current_ship_from_city,
+    Destination_country as solidigm_current_Destination_country,
+    Destination_city as solidigm_current_Destination_city,
+    products_name as solidigm_current_products_name,
+    Operational_Data_incoterm as solidigm_current_Operational_Data_incoterm,
+    Operational_Data_RouteCode as solidigm_current_Operational_Data_RouteCode,
+    Operational_Data_ShipToBusinessIdentifier as solidigm_current_Operational_Data_ShipToBusinessIdentifier,
+    ExtraOrderData_orderconsolKey as solidigm_current_ExtraOrderData_orderconsolKey
+
+FROM [lib://SCO-BI-Common Shared Data  Row/SOLIDIGM_Daily_DN.qvd]
+(qvd);
+
+//HS Codes-------------------------------------------------------------------------------------------
+HSCodes_temp:
+left keep(sale_basic)
+load distinct
+    eorder_order_external_id,
+    eorder_order_systemid,
+    eorder_order_to_shipment_key
+
+
+resident Eorder_Order;
+
+left join(HSCodes_temp)
+load distinct
+    eorder_order_systemid,
+    eorder_orderline_product_name
+resident Eorder_OrderLine;
+
+left join(HSCodes_temp)
+load distinct
+    eorder_order_to_shipment_key,
+    eorder_shipment_end_country,
+    eorder_shipment_start_country
+
+resident Eorder_Shipment;
+
+HSCodes:
+noconcatenate
+load distinct
+    eorder_order_to_shipment_key,
+    eorder_orderline_product_name & eorder_shipment_start_country as solidigim_start_hscode_key,
+    eorder_orderline_product_name & 'NL' as solidigim_end_hscode_key
+resident HSCodes_temp;
+
+drop table HSCodes_temp;
+
+left join(HSCodes)
+LOAD
+    MM_number & sale_export_country as solidigim_start_hscode_key,
+    export_hscode
+FROM [lib://Geo_AMS/Automation/BI/Solidigm/HSCodes.xlsx]
+(ooxml, embedded labels, table is Export);
+
+left join(HSCodes)
+LOAD
+    MM_number & sale_import_country as solidigim_end_hscode_key,
+    import_hscode
+FROM [lib://Geo_AMS/Automation/BI/Solidigm/HSCodes.xlsx]
+(ooxml, embedded labels, table is Import);
+
+//---------------------------------------------------------------------
+dell_parts:
+left keep(eorder_hu_item)
+LOAD
+    "Solidigm Part Number" as eorder_orderline_product_name,
+    "Dell Part Number" as dell_part_number
+FROM [lib://Geo_AMS/Automation/BI/Solidigm/Solidigm to Dell Part Number Mapping.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+CI_RPA:
+left keep(sale_basic)
+LOAD
+    '00' & eorder_shipment_external_id as sale_service_customer_reference,
+    CI_number as ci_number,
+    Order_number as ci_order_number,
+    Extended_price as ci_extended_price,
+    Currency as ci_currency,
+    Total_amount as ci_total_amount
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Solidigm/CI.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq);
+
+//---------------------------------------------------------------------------------------------
+path_matrix:
+left keep(sale_service_specific_data)
+LOAD
+    "PATH ID" as SOLIDIGM_sale_service_reference_8,
+    "Type of flow" as path_matrix_type_of_flow,
+    Lane as path_matrix_lane,
+    "Total TPT" as path_matrix_total_tpt,
+    Pickup as path_matrix_pickup,
+    WheelsUP as path_matrix_wheelsup,
+    WheelsDown as path_matrix_wheelsdown,
+    ArrivalatCD as path_matrix_arrival,
+    ImportCleared as path_matrix_cleared,
+    WillCall as path_matrix_willcall,
+    DepartCD as path_matrix_departcd,
+    Delivered as path_matrix_delivered
+FROM [lib://Geo_AMS/Automation/BI/Solidigm/Solidigm Path ID Matrix.xlsx]
+(ooxml, embedded labels, table is [Path ID Matrix]);
+
+
+
+// MPO Tracking --------------------------------------------------------------------------------
+full_report:
+noconcatenate
+load distinct
+    sale_service_id,
+    sale_end_country,
+    buy_per_sale_qty
+
+resident sale_basic
+where match(sale_service_execution_followup,'PLANNED','STARTED')
+;
+
+
+left join(full_report)
+load distinct
+    sale_service_id,
+    buy_service_id
+resident [sale-buy];
+
+
+left join(full_report)
+load distinct
+    buy_service_id,
+    Carrier,
+    buy_service_nature,
+    buy_service_execution_followup
+resident buy_basic;
+
+//---------------------
+tracking_mpo_temp:
+left keep(full_report)
+load distinct
+    sale_service_id,
+    sale_end_country
+
+resident full_report;
+
+
+
+left join(tracking_mpo_temp)
+load distinct
+    sale_service_id,
+    buy_service_id as planification_buy_service_id,
+    Carrier as planification_carrier
+
+resident full_report
+where match(buy_service_nature,'PLANIFICATION')
+and not match(buy_service_execution_followup, 'FINISHED')
+;
+
+left join(tracking_mpo_temp)
+load distinct
+    buy_service_id as planification_buy_service_id,
+    buy_hawb as planification_buy_hawb
+resident buy_service_specific_data;
+
+
+left join(tracking_mpo_temp)
+load distinct
+    sale_service_id,
+    buy_service_id as linehaul_buy_service_id,
+    Carrier as linehaul_carrier
+
+resident full_report
+where match(buy_service_nature,'LINEHAUL')
+and not match(buy_service_execution_followup, 'FINISHED')
+;
+
+left join(tracking_mpo_temp)
+load distinct
+    buy_service_id as linehaul_buy_service_id,
+    buy_hawb as linehaul_buy_hawb
+resident buy_service_specific_data;
+
+left join(tracking_mpo_temp)
+load distinct
+    sale_service_id,
+    buy_service_id as crossdock_buy_service_id,
+    Carrier as crossdock_carrier
+
+resident full_report
+where match(buy_service_nature,'CROSSDOCK')
+and not match(buy_service_execution_followup, 'FINISHED')
+;
+
+left join(tracking_mpo_temp)
+load distinct
+    buy_service_id as crossdock_buy_service_id,
+    buy_hawb as crossdock_buy_hawb
+resident buy_service_specific_data;
+
+
+left join(tracking_mpo_temp)
+load distinct
+    sale_service_id,
+    buy_service_id as delivery_buy_service_id,
+    Carrier as delivery_carrier
+
+resident full_report
+where match(buy_service_nature,'DELIVERY')
+and not match(buy_service_execution_followup, 'FINISHED')
+;
+
+left join(tracking_mpo_temp)
+load distinct
+    buy_service_id as delivery_buy_service_id,
+    buy_hawb as delivery_buy_hawb
+resident buy_service_specific_data;
+
+
+
+
+tracking_mpo:
+noconcatenate
+load distinct
+    sale_service_id,
+    sale_end_country,
+    planification_buy_service_id,
+    planification_buy_hawb,
+    planification_carrier,
+    crossdock_buy_service_id,
+    crossdock_buy_hawb,
+    crossdock_carrier,
+    linehaul_buy_service_id,
+    linehaul_buy_hawb,
+    linehaul_carrier,
+    delivery_buy_service_id,
+    delivery_buy_hawb,
+    delivery_carrier
+
+resident tracking_mpo_temp;
+
+drop table tracking_mpo_temp;
+
+left join(tracking_mpo)
+load distinct
+    *
+resident sale_last_be;
+
+Store [tracking_mpo] into [lib://Geo_AMS/Automation\file_operations\from_qlik/tracking_mpo_solidigm.csv](txt);
+
+drop table tracking_mpo;
+
+
+
+
+// Eorder to MPO -------------------------------------------------------------------
+
+eorder2mpo_temp:
+noconcatenate
+load distinct
+
+    eorder_shipment_external_id,
+    eorder_shipment_status_id,
+    eorder_shipment_system_id,
+    eorder_shipment_creation_user,
+    eorder_shipment_start_country,
+    eorder_shipment_end_country,
+    hu_reference,
+    eorder_shipment_creation_date
+
+resident Eorder_Shipment
+;
+
+left join(eorder2mpo_temp)
+load
+    eorder_shipment_system_id,
+    eorder_shipment_SOLIDIGM_Sale_Service_Shipment_Information_consolidationKey
+
+resident solidigm_eorder_shipment_specific_info;
+
+left join(eorder2mpo_temp)
+load 
+    hu_reference,
+    sale_service_id
+
+resident sale_basic;
+
+
+eorder2mpo:
+noconcatenate
+load
+    eorder_shipment_external_id,
+    eorder_shipment_creation_user,
+    eorder_shipment_SOLIDIGM_Sale_Service_Shipment_Information_consolidationKey,
+    eorder_shipment_start_country,
+    eorder_shipment_end_country,
+    eorder_shipment_status_id,
+    eorder_shipment_creation_date
+
+
+resident eorder2mpo_temp
+where len(trim(sale_service_id)) = 0 ;
+
+drop table eorder2mpo_temp;
+Store [eorder2mpo] into [lib://Geo_AMS/Automation\file_operations\from_qlik/eorder2mpo_solidigm.csv](txt);
+
+drop table eorder2mpo;
+
+
+
+// Malasia report--------------------------------------------------------------
+Malasia_temp:
+noconcatenate
+load
+    eorder_order_ship_from_name,
+    eorder_order_to_shipment_key,
+    eorder_order_ship_from_city,
+    eorder_order_external_id,
+    eorder_order_systemid
+
+resident Eorder_Order;
+
+left join(Malasia_temp)
+load
+
+    solidigm_eorder_order_ShippingConditions,
+    solidigm_eorder_order_incoterm,
+    solidigm_eorder_order_routecode,
+    eorder_order_systemid
+
+resident solidigm_specific_ifo;
+
+left join(Malasia_temp)
+load
+    eorder_order_systemid,
+    eorder_orderline_product_description,
+    eorder_orderline_requested_quantity
+
+resident Eorder_OrderLine;
+
+Store [Malasia_temp] into [lib://Geo_AMS/Automation\BI\Reports/Malasia.csv](txt);
+
+drop table Malasia_temp;
+
+// Manual Input-----------------------------------------------------------------
+
+manual_input:
+left keep(sale_basic)
+LOAD
+    SH0 as sale_service_id,
+    "Reason Code" as manual_input_reason_code
+FROM [lib://Geo_AMS/Automation/BI/Solidigm/Reason Codes.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+
+//ship to code
+ship_to_hub:
+left keep(sale_basic)
+LOAD
+    solidigm_eorder_order_shipToBusinessIdentifier,
+    manual_hub_code
+FROM [lib://Geo_AMS/Automation/BI/Solidigm/Ship To Hub Code.xlsx]
+(ooxml, embedded labels, table is Hoja1);
+
+
+drop table full_report;
+exit script;

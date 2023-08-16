@@ -1,0 +1,21 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Teams/0.1 Intra US 4PL.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/12. Specific_data_all_clients_buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/4. HU_Items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/14. DIMC.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/16. Buy_LastBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/8. Precall.qvs]);
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/1. missing_awb.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/2. dues no store.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/3. finance_input.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/4. amount.qvs]);
+
+
+
+
+

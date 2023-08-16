@@ -1,0 +1,125 @@
+//3. cp_Missing AWB----------------------------------------------------------------------------------------------------
+[Control_Point_MissingAWB_temp_temp]:
+LEFT Keep ([sale_basic])
+LOAD Distinct
+
+    sale_service_id,
+    sale_loading_number as "missing_awb_loading_number",
+    sale_app_source
+
+
+resident sale_basic
+where not match(sale_service_short_name,'BROOKAY_US','BROOKAY_US/TR','BROOKLYN KAYAK U')
+and not match(sale_service_short_name,'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP')
+and sale_creation_year >= '2021'
+and sale_actual_start_date < '$(vToday)'
+and not match(sale_service_short_name,'IBM_MD_NB')
+//and match(sale_loading_geo,'AMS')
+and not match(net_flag,1)
+and not match(sale_service_execution_followup,'APP','NAP','SHIPMENT CANCELED')
+and sale_app_source = 'Zenith'
+and Client <> 'RIMOWA'
+
+or sale_app_source = 'MPO'
+and match(sale_service_execution_followup,'STARTED','FINISHED')
+and not match(sale_service_execution_followup,'SHIPMENT CANCELED')
+and Client <> 'BP'
+
+;
+
+left join(Control_Point_MissingAWB_temp_temp)
+load distinct
+    sale_service_id,
+    buy_service_id,
+    sale_buy_id
+
+resident [sale-buy];
+
+left join(Control_Point_MissingAWB_temp_temp)
+load distinct 
+    buy_service_id,
+    buy_external_reference,
+    buy_service_nature
+
+resident buy_basic
+where match(buy_service_nature,'PICK_PACK'); 
+
+Control_Point_MissingAWB_temp:
+noconcatenate
+load distinct
+    *
+resident Control_Point_MissingAWB_temp_temp
+where 
+match(buy_service_nature,'PICK_PACK')
+or 
+sale_app_source ='Zenith';
+
+
+drop table Control_Point_MissingAWB_temp_temp;
+
+
+sale_service_specific_data:
+LEFT join([Control_Point_MissingAWB_temp])
+LOAD DISTINCT
+    sale_service_id,
+    sale_hawb, //Missing AWB
+    sale_cuhawb, //Missing AWB
+    sale_tracking_number //Missing AWB
+
+resident sale_service_specific_data;
+
+
+
+CP_Netting_HAWB:
+left join (Control_Point_MissingAWB_temp)
+LOAD
+    CSO as sale_service_id,
+    'Yes' as CP_HAWB_Net
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'HAWB';
+
+Team:
+ left join(Control_Point_MissingAWB_temp)
+ load distinct 
+     sale_buy_id,
+     PU_Team_Responsible
+
+resident Owners;
+
+
+
+[cp_MissingAWB]:
+noconcatenate
+Load distinct
+    sale_service_id,
+    if(CP_HAWB_Net = 'Yes','Correct','Incorrect') as cp_MissingAWB,
+    today() as cp_missing_awb_reportdate
+
+resident [Control_Point_MissingAWB_temp]
+
+where (len(trim("missing_awb_loading_number")) < 2
+and len(trim(sale_hawb)) < 2
+and len(trim(sale_cuhawb)) < 2
+and len(trim(sale_tracking_number)) < 2
+and len(sale_service_id) > 2
+and not match(PU_Team_Responsible,'Carrier Management')
+and len(trim(buy_service_id)) > 2
+and sale_app_source ='Zenith')
+
+or
+(
+len(trim(buy_external_reference)) = 0
+and sale_app_source ='MPO')
+
+or 
+
+(len(trim(sale_hawb)) = 0
+and sale_app_source ='MPO'
+and len(trim(buy_external_reference)) = 0)
+;
+drop table Control_Point_MissingAWB_temp;
+
+Store [cp_MissingAWB] into [lib://Geo_AMS/Automation/BI/Plugins/Reports/Scorecard/4PL/current_hawb_4pl.csv](txt);
+
+drop field cp_missing_awb_reportdate;

@@ -1,0 +1,118 @@
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Network Visibility/LLP/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/12. Specific_data_all_clients_buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/14. DIMC.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/15. Sale_FirstBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/16. Buy_LastBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/57. eorder_shipment_inner.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/21. eorder_HU.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/50. hid_sale_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/65. sale_last_be.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/69. attached documents.qvs]);
+
+
+
+
+
+//$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/1. missing_awb.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/2. dues no store.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/6. late_cw.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/7. timeliness_completeness.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/8. cw_timeliness_completeness.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/14. incorrect_service_level.qvs]);
+//$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/15. incorrect_delivery_term.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/17. pending_customs.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/20. missing_hawb.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/26. missing_buy_hawb.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/27. buy_external_reference.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/31. net_on_time.qvs]);
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/Team/1. hid_mot.qvs]);
+
+report:
+left keep(sale_basic)
+Load  distinct
+    sale_service_id,
+    hu_reference,
+    sale_creation_date,
+    sale_planned_start_date,
+    sale_actual_start_date,
+    sale_planned_end_date,
+    sale_actual_end_date,
+    sale_status,
+    sale_start_country,
+    sale_start_city,
+    sale_end_country,
+    sale_end_city,
+    sale_weight_kg,
+    sale_creation_yearmonth,
+    sale_creation_yearweek
+
+resident sale_basic;
+
+
+left join(report)
+LOAD
+    
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+    
+left join(report)
+Load  distinct
+    sale_service_id,
+    sale_specific_info_mot,
+    sale_tracking_number
+resident sale_service_specific_data;
+
+
+outer join(report)
+Load  distinct
+    hu_reference,
+    eorder_shipment_start_name
+resident Eorder_Shipment;
+
+
+left join(report)
+load distinct 
+    hu_reference,
+    eorder_hu_shipping_unit
+
+resident Eorder_HU;
+
+left join(report)
+load distinct
+
+hu_reference,
+eorder_hu_compum_shipping_unit
+
+resident Eorder_HU_Compum;
+
+left join(report)
+load distinct
+
+sale_service_id,
+delivery_sale_LastEvent_reason_code
+
+resident BE_Delivery;
+
+left join(report)
+load distinct
+
+sale_service_id,
+pickup_sale_LastEvent_reason_code
+
+resident BE_Pickup;
+
+Store report into [lib://Geo_AMS/Automation\BI\Reports/llp_report.csv](txt);
+
+DROP Table report;
+
+exit script;

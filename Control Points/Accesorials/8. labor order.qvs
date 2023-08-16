@@ -1,0 +1,59 @@
+labor_temp:
+noconcatenate
+load DISTINCT
+    hu_reference,
+    1 as eorder_accesorial_required
+resident Eorder_Order_accesorials
+where eorder_order_labor = '1';
+
+
+
+left join(labor_temp)
+load DISTINCT
+    sale_service_id,
+    hu_reference
+resident sale_basic;
+
+left join(labor_temp)
+load DISTINCT
+    sale_service_id,
+    1 as zenith_accesorial_flag
+resident sale_tariff_items
+where sale_tariff_item_consolidated = 'LABOR';
+
+
+labor:
+noconcatenate
+load DISTINCT
+    sale_service_id,
+    'Incorrect' as cp_accesorial_labor
+resident labor_temp
+where len(trim(zenith_accesorial_flag)) = 0;
+
+drop table labor_temp;
+
+labor_rpa_temp:
+noconcatenate
+load DISTINCT
+    *   
+resident labor;
+
+left join(labor_rpa_temp)
+load distinct 
+    sale_service_id,
+    sale_invoice_follow_up
+resident FA;
+
+labor_rpa:
+noconcatenate
+load DISTINCT
+    sale_service_id as 'Service Number',
+    1 as 'INSIDE PICKUP | Invoiced quantity'
+resident labor_rpa_temp
+where sale_invoice_follow_up = '2. Not Invoiced' ;
+
+drop table labor_rpa_temp;
+
+//Store labor_rpa into [lib://Geo_AMS/Automation\file_operations\from_qlik/Accesorial Automation/labor_Order_rpa.csv](txt);
+
+drop table labor_rpa;

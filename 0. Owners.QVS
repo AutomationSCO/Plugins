@@ -1,0 +1,374 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Team.qvs])
+//add the owner of the activity using the Team as link
+
+
+//First load of owners (Temporal Analyst for validate)
+[Team-Owner pivot]:
+NoConcatenate
+Load 
+
+*, //Pickup Analyst Temp
+if(sale_start_geo = 'AMS' or PU_Team_Responsible = 'Kyndryl & Align Operations',(
+ 
+    if(match(Client,'ARROW','TECHDATA'),ExecutionOwner,
+
+
+    //New Co
+    if(PU_Team_Responsible = 'New Co' and Client='BROOKLYN KAYAK','Geovanni Rangel',
+        if(PU_Team_Responsible = 'New Co' and Client='KEISER','Patricio Arrigunaga',
+                if(PU_Team_Responsible = 'New Co' and match(Client,'COMPUTACENTER'),'Patricio Arrigunaga',
+                    if(PU_Team_Responsible = 'New Co' and not match(Client,'IBM','SOFTLAYER','MERGE','MERATIVE'),'Geovanni Rangel'
+
+
+
+)))))),
+//LLP
+    if(PU_Team_Responsible = 'LLP' and Client='HID','Ana Gutierrez',
+        if(PU_Team_Responsible = 'LLP' and Client='SOLIDIGM','Claudia Pineda'
+)))
+
+as PU_Analyst_temp,
+
+
+
+
+
+
+//delivery analyst Temp
+    if(GEODIS_ops_Team = 'Intra Team' or Del_Team_Responsible = 'New Co' or match(sale_start_country&sale_end_country,'HUUS'),( //Temporal
+
+
+
+//Vendor Management
+    if(Del_Team_Responsible='Vendor Management' and sale_end_country='CA' and match(Client,'IBM','ALIGN') and match(sale_start_country,'US','MX') or 
+    Del_Team_Responsible='Vendor Management' and match(sale_start_country&sale_end_country,'CACA') and match(Client,'IBM') and match(IBM_Order_Type,'VENDOR'), 'Andrea Valles',
+        if(Del_Team_Responsible='Vendor Management' and sale_end_country='CA','Mitzi Guzmán',
+            if(Del_Team_Responsible='Vendor Management' and sale_start_country&sale_end_country='MXMX','Javier Villatoro',
+                
+
+
+
+//Carrier Management
+    if(Del_Team_Responsible='Carrier Management' and Carrier='MCCOLLISTE' and buy_executed_SLA='015' ,'Abigail Vega',
+        if(Del_Team_Responsible='Carrier Management' and match(sale_start_country&sale_end_country,'MXCA') and Carrier='MILL_CREEK','Carolina Luna',
+            if(Del_Team_Responsible='Carrier Management',ExecutionOwner,
+                
+
+
+//New Co
+    if(Del_Team_Responsible = 'New Co' and match(Client,'COMPUTACENTER','KEISER'),'Patricio Arrigunaga',
+        if(Del_Team_Responsible='New Co' and Client='BROOKLYN KAYAK','Geovanni Rangel',
+                if(Del_Team_Responsible='New Co','Geovanni Rangel'
+    )))))))))),
+
+//LLP
+    if(PU_Team_Responsible = 'LLP' and Client='HID','Ana Gutierrez',
+        if(PU_Team_Responsible = 'LLP' and Client='SOLIDIGM','Claudia Pineda'
+    )))                                     
+                                        
+                                    
+as Del_Analyst_temp
+
+
+
+
+
+
+
+resident [Team];
+
+Drop table [Team];
+
+
+//Seconf load of owners
+[Owners_temp]:
+NoConcatenate
+Load distinct
+
+Client,
+Del_Team_Responsible,
+ExecutionOwner,
+ExecutionOwner_loading,
+PlanningOwner,
+sale_service_execution_followup,
+PU_Team_Responsible,
+PU_Analyst_temp,
+Del_Analyst_temp,
+sale_buy_id,
+sale_service_id,
+if(isnull(PU_Analyst_temp) and GEODIS_ops_Team = 'Intra Team' or match(PU_Team_Responsible,'Align Operations','Kyndryl Operations'),(
+//New Co
+
+    if(PU_Team_Responsible = 'New Co' and Client='BROOKLYN KAYAK' and wildmatch(hu_reference,'GWG*'),'Alejandra Casal',
+        if(PU_Team_Responsible = 'New Co' and Client='BROOKLYN KAYAK','Dania Moran',
+            if(PU_Team_Responsible='New Co' and not match(Client,'IBM','SOFTLAYER','MERGE','MERATIVE'),'Geovanni Rangel',
+
+//'Align Operations'
+if(PU_Team_Responsible = 'Align Operations' and sale_start_city = 'LA PORTE'
+    or sale_city2city = 'EL PASO-JUAREZ','Julieta Magaña',
+if((PU_Team_Responsible = 'Align Operations' and Client = 'ALIGN'and GEODIS_ops_Team = 'Intra Team') 
+        or (PU_Team_Responsible = 'Align Operations' and Client = 'ALIGN' and match(sale_start_country&sale_end_country,'CAUS')),'Biridiana Contreras',
+    if(PU_Team_Responsible = 'Align Operations' and match(Client,'ALIGN') and GEODIS_ops_Team = 'Inter Team','Daniel Maciel',
+
+//'Kyndryl Operations' 
+if(PU_Team_Responsible = 'Kyndryl Operations' and Client = 'KYNDRYL' and GEODIS_ops_Team = 'Inter Team' and sale_caribbean_flag = 'No'
+or PU_Team_Responsible = 'Kyndryl Operations' and match(sale_start_country&sale_end_country,'USCA'),'Valeria Gomez',      
+if(PU_Team_Responsible = 'Kyndryl Operations' and match(sale_start_country&sale_end_country,'USUS'),'Emmanuel Meneses',
+    if(PU_Team_Responsible = 'Kyndryl Operations' and Client = 'KYNDRYL' and GEODIS_ops_Team = 'Intra Team'
+    or PU_Team_Responsible = 'Kyndryl Operations' and Client = 'KYNDRYL' and sale_caribbean_flag = 'Yes' and sale_start_country = 'CA','Diego Lozano',
+        if(PU_Team_Responsible = 'Kyndryl Operations' and Client = 'KYNDRYL' and sale_latam_flag = 'Yes','Valeria Gomez',
+        
+            
+
+//Vendor Management
+    if(PU_Team_Responsible = 'Vendor Management' and sale_start_zip_code = 'L4V 1R4', 'Andrea Valles', 
+        if(PU_Team_Responsible = 'Vendor Management'and  match(sale_start_country&sale_end_country,'CACA') and match(IBM_Order_Type,'VENDOR','PLATFORM'),'Andrea Valles', 
+                    if(PU_Team_Responsible = 'Vendor Management' and match(sale_start_country&sale_end_country,'CACA') 
+                    or PU_Team_Responsible = 'Vendor Management' and IsGNumber='Plant' and wildmatch(Carrier,'APPLE*','MACKIE*'), 'Mitzi Guzmán',
+                   
+    if(PU_Team_Responsible = 'Vendor Management' and IsGNumber='Plant' and match(Carrier,'AIT','CLANC*')
+        or PU_Team_Responsible = 'Vendor Management' and len(purgechar( mid(sale_service_end_name,1,5),'QWERTYUIOPASDFGHJKLÑZXCVBNM')) = 2 and len(purgechar( mid(sale_service_end_name,1,5),'1234567890')) = 3,'Michelle Garcia',
+    if(PU_Team_Responsible='Vendor Management' and wildmatch(hu_reference,'*LA'),'Javier Villatoro',
+            if(PU_Team_Responsible = 'Vendor Management' and match(sale_start_country & sale_end_country,'MXUS','MXCA') and wildmatch(sale_service_start_name,'*JABIL*','*FLEX*','*PARAGON*','*CISCO*'), 'Javier Villatoro',
+                if(PU_Team_Responsible = 'Vendor Management' and match(sale_start_zip_code,'TX-76051','NY-12531') and (Left(hu_reference,2)='HG' 
+                or Left(hu_reference,4)='BUDA' 
+                or Left(hu_reference,3)='IBM') or PU_Team_Responsible = 'Vendor Management' and Right(hu_reference,1)='D'
+                or PU_Team_Responsible = 'Vendor Management' and IsGNumber='Plant' and wildmatch(Carrier,'BTX*','TST*','TAZ'),'Javier Villatoro',
+                    if(PU_Team_Responsible = 'Vendor Management' and IsGNumber='Plant' and wildmatch(Carrier,'MCCOLLISTE*','MACH*','ATLAS VAN*','GEO LOG US*'),'Jose Baltazar',
+                        if(PU_Team_Responsible = 'Vendor Management' and IsGNumber='Plant' and wildmatch(Carrier,'FEDEX*','*GEOTRS*'),'Gabriel Villalobos',
+                            if(PU_Team_Responsible = 'Vendor Management' and IsGNumber='Plant' and Wildmatch(Carrier,'STI*','MAGELLAN','MAINFRET*','CRST','GEODIS FF','ELITE*','NIPPON','KIRS*'),'Gerardo Tamayo',
+                                if(PU_Team_Responsible = 'Vendor Management' and IsGNumber='Plant' and Wildmatch(Carrier,'MILL*','TOLL*','CEVA'),'Andrea Valles',                              
+                                        if(PU_Team_Responsible = 'Vendor Management' and Client='SOFTLAYER' and match(sale_end_country,'USCA'),PlanningOwner,
+                                            if(PU_Team_Responsible = 'Vendor Management' and Client='SOFTLAYER' and match(sale_start_country,'US','CA','MX'),'Michelle Garcia',//done
+                                                if(PU_Team_Responsible = 'Vendor Management' and match(sale_start_country,'US','CA','MX') and Client='IBM' and (len(hu_reference)=6 and left(hu_reference,1)=9 or len(hu_reference)=7 and left(hu_reference,2)=10) and sale_from_code<>'USMO','Michelle Garcia',
+                                                    if(PU_Team_Responsible = 'Vendor Management',PlanningOwner,         
+                  
+                                                                
+                                                        
+
+//Carrier Managment
+    
+    if(PU_Team_Responsible = 'Carrier Management' and sale_start_country='MX' and ta_log_flag = 1 and PU_Team_Responsible = 'Carrier Management'
+    or PU_Team_Responsible='Carrier Management' and match(sale_start_country&sale_end_country,'MXCA') and Carrier='MILL_CREEK', 'Carolina Luna',
+        if(PU_Team_Responsible = 'Carrier Management' and sale_start_zip_code='TX-76051',ExecutionOwner,
+            if(PU_Team_Responsible = 'Carrier Management' and Carrier='MCCOLLISTE' and buy_executed_SLA='015' ,'Abigail Vega',
+                if(PU_Team_Responsible = 'Carrier Management' and match(sale_start_country,'MX'), 'Alexis Ramos',
+                    if(PU_Team_Responsible = 'Carrier Management' 
+                        //and sale_service_execution_followup = 'APP'
+                            and WildMatch(Carrier, 'CEVA','FEDEX*','MILL*') 
+                                and Match(sale_start_country&sale_end_country,'CAUS','CAMX') 
+                                    ,'Andrea Valles',
+                                        if(PU_Team_Responsible = 'Carrier Management' 
+                                        //and sale_service_execution_followup = 'APP'
+                                            and WildMatch(Carrier, 'INNOVATIVO') 
+                                                and Match(sale_start_country&sale_end_country,'USMX') 
+                                                    , 'Alexis Ramos',
+                                                    if(PU_Team_Responsible = 'Carrier Management'
+                                                        and WildMatch(Carrier, 'TA*') 
+                                                            and Match(sale_start_country&sale_end_country,'USMX'),
+                                                            'Carolina Luna', 
+                    if(PU_Team_Responsible = 'Carrier Management' and wildmatch(hu_reference,'*MSD','*FM'),ExecutionOwner,
+                        
+
+    if(PU_Team_Responsible='Carrier Management' and wildmatch(hu_reference,'*RT','*R'),ExecutionOwner_loading,
+    if(PU_Team_Responsible='Carrier Management' ,ExecutionOwner,
+    PU_Analyst_temp
+
+    )))))))))))))))))))))))))))))))))))),
+
+    if(match(PU_Team_Responsible,'EMEA','APAC','MX Imports'),
+
+if(PU_Team_Responsible = 'EMEA' and sale_start_geo = 'EMEA','EMEA',
+ 
+if(PU_Team_Responsible = 'EMEA' and match(sale_start_geo&sale_end_geo,'AMSEMEA')  and sale_service_short_name = 'IBMMD/OCEAN_NCS'
+or PU_Team_Responsible = 'EMEA' and match(sale_start_geo&sale_caribbean_flag,'AMSYes')  and sale_service_short_name = 'IBMMD/OCEAN_NCS'
+//or PU_Team_Responsible = 'EMEA' and match(sale_start_country&sale_end_geo,'USEMEA')  and IsGNumber='Vendor'
+//or match(sale_start_country&sale_caribbean_flag,'USYes')  and IsGNumber='Vendor'
+//or PU_Team_Responsible = 'EMEA' and match(sale_start_country&sale_end_geo,'CAEMEA') and IsGNumber='Vendor'
+//or match(sale_start_country&sale_caribbean_flag,'CAYes') and IsGNumber='Vendor'
+,'Larissa Garcia',
+    
+    if(PU_Team_Responsible = 'EMEA' and match(sale_start_country&sale_end_geo,'MXEMEA') , 'Mariel Acedo',
+        if(PU_Team_Responsible = 'EMEA' and match(sale_start_country&sale_caribbean_flag,'MXYes') , 'Mariel Acedo',
+            if(PU_Team_Responsible = 'EMEA' and match(sale_start_country&sale_end_geo,'CAEMEA')
+                and Match(IsGNumber,'Vendor','Softlayer','Plant') 
+                    or sale_end_geo = 'EMEA' and wildmatch(hu_reference,'*SL*'), 'Beatriz García',
+                        if(PU_Team_Responsible = 'EMEA' and match(sale_start_country&sale_end_geo,'USEMEA')
+                            and Match(IsGNumber,'Vendor','Softlayer'), 'Beatriz García',
+                                if(match(sale_start_country&sale_caribbean_flag,'USYes')
+                                     or PU_Team_Responsible = 'EMEA' and match(sale_start_country&sale_end_geo,'USEMEA')  and IsGNumber='Plant', 'Larissa Garcia',
+                                        if(match(sale_start_country&sale_caribbean_flag,'CAYes') , 'Larissa Garcia',
+                                            if(PU_Team_Responsible = 'EMEA' and match(sale_latam_flag&sale_end_geo,'YesEMEA'), 'Mariel Acedo',
+                                                if(PU_Team_Responsible = 'EMEA' and match(sale_caribbean_flag&sale_end_country,'YesMX','YesUS','YesCA') ,'Mariel Acedo',
+
+                                
+                                                       
+                                                
+    //if(PU_Team_Responsible = 'MX Imports' and match(sale_start_country&sale_end_country,'CAMX','CAUS','USMX') ,'Jose Baltazar',
+        //if(PU_Team_Responsible = 'MX Imports' and match(sale_start_country&sale_end_country,'MXMX') ,'Vendors MX',
+
+
+
+if(PU_Team_Responsible = 'APAC' and match(sale_start_geo&sale_end_geo,'APACAMS') and sale_service_short_name = 'IBMMD/OCEAN_NCS' 
+or PU_Team_Responsible = 'APAC' and match(sale_start_country&sale_end_geo,'HKAMS','CNAMS','TWAMS') 
+, 'APAC',                
+    if(PU_Team_Responsible = 'APAC' and match(sale_start_country&sale_end_geo,'MXAPAC') 
+    or PU_Team_Responsible = 'APAC' and sale_latam_flag = 'Yes'and sale_end_geo = 'APAC' 
+    , 'Luis Razo',
+        
+        if(PU_Team_Responsible = 'APAC' and match(sale_start_country&sale_end_geo,'USAPAC','CAAPAC') ,'Cesar Muñoz & Fernanda Lee',
+            
+            if(PU_Team_Responsible = 'APAC' and match(sale_start_geo&sale_end_geo,'APACAMS') , 'APAC'
+                                        )))))))))))))),PU_Analyst_temp
+    
+    
+    
+    
+    
+    
+    
+    )) 
+                            
+                            
+as PU_Analyst,
+
+
+
+if(isnull(Del_Analyst_temp) and GEODIS_ops_Team = 'Intra Team' or PU_Team_Responsible = 'Kyndryl Operations' or PU_Team_Responsible = 'Align Operations',(
+
+//Vendor Management
+    if(Del_Team_Responsible='Vendor Management' and sale_end_country='CA' and match(sale_start_country,'US','MX'), 'Andrea Valles',
+        if(Del_Team_Responsible='Vendor Management' and sale_start_country&sale_end_country='MXMX','Javier Villatoro',
+
+
+
+//'Align Operations'
+if(Del_Team_Responsible = 'Align Operations' and sale_start_city = 'LA PORTE'
+    or sale_city2city = 'EL PASO-JUAREZ','Julieta Magaña',
+if((Del_Team_Responsible = 'Align Operations' and match(Client,'ALIGN') and GEODIS_ops_Team = 'Intra Team') 
+        or (Del_Team_Responsible = 'Align Operations' and match(Client,'ALIGN') 
+                and match(sale_start_country&sale_end_country,'USCA','CAUS')),'Biridiana Contreras',
+    if(Del_Team_Responsible = 'Align Operations' and match(Client,'ALIGN') and GEODIS_ops_Team = 'Inter Team','Julieta Magaña',
+
+
+//'Kyndryl Operations'
+if(Del_Team_Responsible='Kyndryl Operations' and match(Client,'KYNDRYL') and GEODIS_ops_Team = 'Inter Team' and sale_caribbean_flag = 'No'
+or Del_Team_Responsible = 'Kyndryl Operations' and match(sale_start_country&sale_end_country,'USCA'),'Valeria Gomez', 
+    if(Del_Team_Responsible = 'Kyndryl Operations' and match(sale_start_country&sale_end_country,'USUS'),'Emmanuel Meneses',
+        if(Del_Team_Responsible = 'Kyndryl Operations' and Client = 'KYNDRYL' and GEODIS_ops_Team = 'Intra Team'
+        or Del_Team_Responsible = 'Kyndryl Operations' and Client = 'KYNDRYL' and sale_caribbean_flag = 'Yes' and sale_start_country = 'CA','Diego Lozano',      
+            if(Del_Team_Responsible = 'Kyndryl Operations' and Client = 'KYNDRYL' and sale_latam_flag = 'Yes','Valeria Gomez',    
+            if(Del_Team_Responsible = 'Kyndryl Operations' and match(Client,'KYNDRYL') and match(sale_start_country&sale_end_country,'USCA', 'USMX'),'Valeria Gomez',
+
+
+
+
+//Carrier Management
+     if(Del_Team_Responsible='Carrier Management' and Carrier='MCCOLLISTE' and buy_executed_SLA='015' ,'Abigail Vega',
+        if(Del_Team_Responsible='Carrier Management' and match(sale_start_country&sale_end_country,'MXCA') and Carrier='MILL_CREEK','Carolina Luna',
+                if(Del_Team_Responsible = 'Carrier Management' 
+                        and WildMatch(Carrier, 'CEVA','FEDEX*','MILL*') 
+                            and (sale_start_country&sale_end_country) = 'CAUS' 
+                                and sale_service_execution_followup = 'CD', 'Karla Barragan',
+                                    if(Del_Team_Responsible = 'Carrier Management' and
+                                        (sale_start_country&sale_end_country) = 'USMX' and Match(Carrier,'INNOVATIVO'),'Alexis Ramos', 
+                                        if(Del_Team_Responsible = 'Carrier Management' and
+                                            (sale_start_country&sale_end_country) = 'USMX' and WildMatch(Carrier,'TA*', 'CEVA'),'Carolina Luna',
+                                                if((sale_start_country&sale_end_country) = 'USMX'
+                                                    and Carrier = 'FEDEX', 
+                                                        'Pablo Alanis',
+                                                /*if(Del_Team_Responsible = 'Carrier Management' 
+                                                    and WildMatch(Carrier, 'CEVA','FEDEX*','MILL*') 
+                                                        and (sale_start_country&sale_end_country) = 'CAMX' 
+                                                            and sale_service_execution_followup = 'CD', 'Andrea Valles',*/ 
+
+                if(Del_Team_Responsible='Carrier Management',ExecutionOwner
+                    
+                    
+            )
+                ))))))))))))))))),
+    
+    if(match(Del_Team_Responsible,'EMEA','APAC','MX Imports'),
+
+
+
+if(Del_Team_Responsible = 'EMEA' and sale_end_geo = 'EMEA','EMEA',
+    if(Del_Team_Responsible = 'EMEA' and match(sale_start_country&sale_caribbean_flag,'MXYes') , 'Beatriz García',
+        if(Del_Team_Responsible = 'EMEA' and match(sale_start_geo&sale_latam_flag,'EMEAYes','EMEAYes') ,'Mariel Acedo',      
+            if(Del_Team_Responsible = 'EMEA' and match(sale_start_country &sale_end_country,'HUUS') ,'Mariel Acedo',
+                if(Del_Team_Responsible = 'EMEA' and match(sale_caribbean_flag&sale_end_country,'YesMX','YesUS','YesCA') ,'Mariel Acedo',
+                    if(Del_Team_Responsible = 'EMEA' and sale_start_geo = 'EMEA','Tania Soto',
+                        if(Del_Team_Responsible = 'EMEA' and match(sale_start_country&sale_caribbean_flag,'CAYes','USYes') , 'Larissa Garcia',
+                            if(Del_Team_Responsible = 'EMEA' and match(sale_start_country,'HU'), 'Erik Aranda',            
+                                                
+if(Del_Team_Responsible = 'MX Imports' and match(sale_end_zip_code,'JAL-45680','45680') ,'Itzel Hernandez', 
+    if(Del_Team_Responsible = 'MX Imports' and match(sale_start_country&sale_end_country,'CAMX','CAUS','USMX') ,'Jose Baltazar',
+    if(Del_Team_Responsible = 'MX Imports' and match(sale_start_country&sale_end_country,'MXMX') ,'Vendors MX',
+
+
+
+
+/*if(Del_Team_Responsible = 'APAC' and sale_service_short_name = 'IBMMD/OCEAN_NCS' and match(sale_start_geo&sale_end_country,'APACMX') 
+, 'Salma Rubio',                
+    if(Del_Team_Responsible = 'APAC' and match(sale_start_country&sale_end_geo,'MXAPAC') 
+    or Del_Team_Responsible = 'APAC' and sale_latam_flag = 'Yes'and sale_end_geo = 'APAC' 
+    , 'APAC',
+        
+        if(Del_Team_Responsible = 'APAC' and match(sale_start_country&sale_end_geo,'USAPAC','CAAPAC') ,'APAC',
+            
+            if(Del_Team_Responsible = 'APAC' and match(sale_start_geo&sale_end_country,'APACUS','APACCA') and WildMatch(sale_service_short_name, 'IBMMD/OCEAN_NCS', 'IBMMD/*') or
+            Del_Team_Responsible = 'EMEA' and match(sale_start_geo&sale_end_country,'EMEAUS','EMEACA')  and sale_service_short_name = 'IBMMD/OCEAN_NCS', 'Aaron Miranda'
+                                        
+
+
+                                        ))))*/
+    if(
+    Match(sale_start_country,'HK','CN','TW') and Match(sale_end_country, 'MX','US','CA'), 'Salma',
+    if(
+        Del_Team_Responsible = 'APAC' and not match(sale_start_country,'HK','CN','TW') and Match(sale_end_country, 'MX','US','CA'), 'Aaron',
+        
+        if(Del_Team_Responsible = 'APAC' and sale_service_short_name = 'IBMMD/OCEAN_NCS' and Match(sale_end_country, 'US','CA'), 'Aaron',
+        
+        if(Del_Team_Responsible = 'APAC' and sale_service_short_name = 'IBMMD/OCEAN_NCS' and Match(sale_end_country, 'MX'), 'Salma',
+        
+        if(Del_Team_Responsible = 'APAC' and sale_latam_flag = 'Yes', 'Salma'
+    )))))))))))))))),Del_Analyst_temp 
+    
+    
+    
+    
+    
+    
+    ))
+    
+as Del_Analyst
+
+resident [Team-Owner pivot];
+
+Drop table [Team-Owner pivot];
+
+
+//final table join per sale_buy_id
+[Owners]:
+NoConcatenate
+Load distinct
+sale_buy_id,
+//sale_service_id,
+if(isnull(Del_Analyst),'TBD',Del_Analyst) as Del_Analyst,
+Del_Team_Responsible,
+PU_Analyst_temp,
+Del_Analyst_temp,
+ExecutionOwner,
+//ExecutionOwner_loading,
+//ExecutionOwner_keiser,
+PlanningOwner,
+
+if(isnull(PU_Analyst),'TBD',PU_Analyst) as PU_Analyst,
+PU_Team_Responsible
+
+
+resident [Owners_temp]
+//where len(sale_buy_id) <> 0;
+;
+
+Drop table Owners_temp;

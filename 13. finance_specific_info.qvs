@@ -1,0 +1,97 @@
+
+financial_specific_info_temp_temp:
+noconcatenate
+load distinct
+    sale_service_id,
+    if('$(vToday)' - sale_actual_end_date <= 10,'On Time',
+        if('$(vToday)' - sale_actual_end_date <= 15,'On Risk','Late')) as sale_finance_aging_temp,
+
+    '$(vToday)' - sale_actual_end_date as sale_validation_days_temp,
+    
+    sale_actual_end_date,
+    sale_creation_date,
+    Client,
+    sale_contractor_party_Group_N1,
+    sale_service_short_name,
+    sale_executor_short_name
+
+resident sale_basic;
+
+left join(financial_specific_info_temp_temp)
+load distinct
+    sale_service_id,
+    buy_service_id
+resident [sale-buy];
+
+left join(financial_specific_info_temp_temp)
+load distinct
+    buy_service_id,
+    buy_executor_short_name
+resident buy_basic;
+
+left join(financial_specific_info_temp_temp)
+load distinct 
+    sale_service_id,
+    sale_invoice_update_date
+    
+resident FA;
+
+financial_specific_info_temp:
+noconcatenate
+load distinct
+    *,
+    /*if(isnull(sale_invoice_update_date),sale_validation_days_temp,
+        if(match(buy_executor_short_name & sale_service_short_name & sale_executor_short_name,
+            'IBM_MD_MXCLOG_MX_MDSMXKEY','IBM_MD_MXSIVI_MXSMXKEY','IBM_MD_MXTAME_MXSMXKEY',
+                'IBM_MD_MXTRANSCARSMXKEY','IBM_MD_MXTRANSPADEXSMXKEY','IBM_MD_USFEDEX_USSUSKEY'),
+                        networkdays(monthend(sale_actual_end_date),sale_invoice_update_date),
+                            if(match(sale_contractor_party_Group_N1,'IBM_NCS'),networkdays(sale_creation_date,sale_invoice_update_date),
+                                if(match(sale_contractor_party_Group_N1,'NEWCUS','COMPUTACENTER'),
+                                    networkdays(monthend(sale_actual_end_date),sale_invoice_update_date),
+                            networkdays(sale_actual_end_date,sale_invoice_update_date))))) as sale_validation_days*/
+/*    if(isnull(sale_invoice_update_date),sale_validation_days_temp,
+        if(match(buy_executor_short_name & sale_service_short_name & sale_executor_short_name,
+            'IBM_MD_MXCLOG_MX_MDSMXKEY','IBM_MD_MXSIVI_MXSMXKEY','IBM_MD_MXTAME_MXSMXKEY',
+                'IBM_MD_MXTRANSCARSMXKEY','IBM_MD_MXTRANSPADEXSMXKEY','IBM_MD_USFEDEX_USSUSKEY'),
+                        Floor((sale_invoice_update_date-((monthend(sale_actual_end_date))+10))),
+                            if(match(sale_contractor_party_Group_N1,'IBM_NCS'),networkdays(sale_creation_date,sale_invoice_update_date),
+                                if(match(sale_contractor_party_Group_N1,'NEWCUS','COMPUTACENTER'),
+                                    Floor((sale_invoice_update_date-((monthend(sale_actual_end_date))+10))),
+                            networkdays(sale_actual_end_date,sale_invoice_update_date))))) as sale_validation_days*/
+       if((match(buy_executor_short_name & sale_service_short_name & sale_executor_short_name,
+            'IBM_MD_MXCLOG_MX_MDSMXKEY','IBM_MD_MXSIVI_MXSMXKEY','IBM_MD_MXTAME_MXSMXKEY',
+                'IBM_MD_MXTRANSCARSMXKEY','IBM_MD_MXTRANSPADEXSMXKEY','IBM_MD_USFEDEX_USSUSKEY')
+                        or match(sale_contractor_party_Group_N1,'NEWCUS','COMPUTACENTER'))
+                            and (len(sale_invoice_update_date) < 1),
+                                (Floor(Today() - Date((monthend(sale_actual_end_date))+10))),
+                                    if(
+                                        (match(buy_executor_short_name & sale_service_short_name & sale_executor_short_name,
+                                            'IBM_MD_MXCLOG_MX_MDSMXKEY','IBM_MD_MXSIVI_MXSMXKEY','IBM_MD_MXTAME_MXSMXKEY',
+                                                'IBM_MD_MXTRANSCARSMXKEY','IBM_MD_MXTRANSPADEXSMXKEY','IBM_MD_USFEDEX_USSUSKEY') 
+                                                    or match(sale_contractor_party_Group_N1,'NEWCUS','COMPUTACENTER'))
+                                                         and len(sale_invoice_update_date) > 1, 
+                                                             Floor(sale_invoice_update_date - Date((monthend(sale_actual_end_date))+10)),
+                                                                    if(len(sale_invoice_update_date) < 1,
+                                                                        Floor(Today() - sale_actual_end_date),
+                                                                            if(len(sale_invoice_update_date) > 0,
+                                                                                sale_invoice_update_date - sale_actual_end_date)))) as sale_validation_days
+
+            resident financial_specific_info_temp_temp;
+
+            drop table financial_specific_info_temp_temp;
+
+financial_specific_info:
+noconcatenate
+load distinct
+    sale_service_id,
+    sale_validation_days,
+    if(sale_validation_days < 15, '1. 1 - 15 Days',
+        if(sale_validation_days < 30, '2. 16 - 30 Days', '3. 30+ Days')) as sale_finance_aging,
+    
+    /*if(isnull(sale_invoice_update_date),sale_finance_aging_temp,
+    if(sale_validation_days < 15,'On Time','Late')) as sale_finance_on_time_kpi*/
+    if(sale_validation_days < 15,'On Time','Late') as sale_finance_on_time_kpi         
+
+resident financial_specific_info_temp;
+
+drop table financial_specific_info_temp;

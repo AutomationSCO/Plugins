@@ -1,0 +1,33 @@
+fa_ax_temp:
+noconcatenate
+load distinct
+    sale_full_invoice_ax_key,
+    sale_full_invoice_amount_gross
+
+resident full_FA
+where sale_full_invoice_follow_up = '1. Invoiced'
+;
+
+
+left join(fa_ax_temp)
+Load  distinct
+
+    sale_full_invoice_ax_key,
+    credit_db_Gross_amount
+
+resident db_credit;
+
+
+
+fa_ax:
+noconcatenate
+load distinct
+
+    sale_full_invoice_ax_key,
+    if(round(sale_full_invoice_amount_gross) = round(credit_db_Gross_amount),'Correct','Incorrect') as cp_fa_ax
+
+resident fa_ax_temp
+//where not match(sale_executor_short_name,'SBRKEY','SCLKEY','SCOKEY','SPEKEY')
+;
+
+drop table fa_ax_temp;

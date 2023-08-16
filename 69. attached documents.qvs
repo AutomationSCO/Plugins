@@ -1,0 +1,14 @@
+
+attached_documents:
+left keep(sale_basic)
+LOAD
+	v_oms_shipment_order_req_doc.shipment_order_systemid as sale_service_system_id,
+    v_oms_shipment_order_req_doc.document_id as sale_document_id,
+    v_oms_shipment_order_req_doc.is_required as sale_document_is_required,
+    v_oms_shipment_order_req_doc.is_public as sale_document_is_puclic,
+    v_oms_shipment_order_req_doc.is_manual as sale_document_is_manual,
+    v_oms_shipment_order_req_doc.provided_date as sale_document_provided
+    //,    v_oms_shipment_order_req_doc.binary_systemid as sale_document_,
+    //v_oms_shipment_order_req_doc.document_type_systemid as sale_document_
+FROM [lib://QVD Ops_Cognos/v_oms_shipment_order_req_doc.qvd]
+(qvd);

@@ -1,0 +1,16 @@
+Eorder_HU_Compum_kyndryl:
+left keep(Eorder_HU_Compum)
+LOAD
+    Kyndryl_sale_HU_internal_id as eorder_HU_internal_id,
+    //Kyndryl_sale_HU_sale_service_system_id,
+    //Kyndryl_sale_HU_sale_service_id,
+    Kyndryl_Sale_HU_Dangerous_Goods_Kyndryl_ItemHazmat,
+    Kyndryl_Sale_HU_Dangerous_Goods_Kyndryl_LitBat,
+    Kyndryl_Sale_HU_Dangerous_Goods_Kyndryl_TypeBat,
+    Kyndryl_Sale_HU_Dangerous_Goods_Kyndryl_TypeDG,
+    Kyndryl_Sale_HU_Dangerous_Goods_Kyndryl_LitBatStatement,
+    Kyndryl_Sale_HU_Dangerous_Goods_Kyndryl_DGStatement
+    //Kyndryl_sale_HU_app_source,
+    //Kyndryl_sale_HU_record_date
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_HU_Kyndryl.qvd]
+(qvd);

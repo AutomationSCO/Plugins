@@ -1,0 +1,68 @@
+
+[DIMC]:
+left Keep (buy_basic)
+LOAD
+    if(isnull(DIMC),'-',DIMC) as DIMC,
+    Status as dimc_status,
+    //Customer,
+    //Carrier as dimc_carrier,
+    //Tier,
+    //Origin,
+    //Destination,
+    //MoT,
+    "Incident Type" as dimc_incident_type, 
+    Pro# as buy_service_id,
+    RCCA as dimc_rcca,
+    //Claim,
+    "Root Cause" as dimc_root_cause,
+    "Action Plan" as dimc_action_plan,
+    //Comments,
+    //Stars,
+    "Created By" as dimc_created_by,
+    date("Creation Date") as dimc_creation_date,
+    week("Creation Date",0,1) - 1  as dimc_creation_week,
+    year("Creation Date") & '-' & num((week("Creation Date",0,1) - 1),'00') as dimc_creationyearWeek,
+    //"Shipped Date",
+    //"Delivery Date",
+    "Closed Date" as dimc_closed_date
+    
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Incidents.xlsx]
+(ooxml, embedded labels, table is [page 1]);
+
+[DIMC_temp]:
+left Keep (buy_basic)
+LOAD
+    if(isnull(DIMC),'-',DIMC) as DIMC,
+    Status as dimc_status,
+    //Customer,
+    //Carrier as dimc_carrier,
+    //Tier,
+    //Origin,
+    //Destination,
+    //MoT,
+    "Incident Type" as dimc_incident_type, 
+    SSO as buy_service_id,
+    RCCA as dimc_rcca,
+    //Claim,
+    "Root Cause" as dimc_root_cause,
+    "Action Plan" as dimc_action_plan,
+    Comments as dimc_comments,
+    //Stars,
+    "Created By" as dimc_created_by,
+    date("Creation Date") as dimc_creation_date,
+    week("Creation Date",0,1) - 1  as dimc_creation_week,
+    year("Creation Date") & '-' & num((week("Creation Date",0,1) - 1),'00') as dimc_creationyearWeek,
+    //"Shipped Date",
+    //"Delivery Date",
+    "Closed Date" as dimc_closed_date
+    
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Incidents.xlsx]
+(ooxml, embedded labels, table is [page 1]);
+
+concatenate(DIMC)
+load distinct 
+    *   
+
+resident DIMC_temp;
+
+drop table DIMC_temp;

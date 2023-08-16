@@ -1,0 +1,122 @@
+// 22. Incorrect Amounts -------------------------------------------------------------------------------------------------------------------------------------
+
+[cp_amount_temp]:
+noconcatenate
+LOAD Distinct
+    sale_service_id,
+    IBM_Standard_Carrier_Alpha_Code,
+    sale_creation_year,
+    sale_service_execution_followup,
+    Client,
+    sale_service_start_name,
+    sale_service_end_name,
+    sale_app_source
+
+resident sale_basic
+where 
+not match(net_flag,1)
+and match(sale_ams_billing,'AMS Bill')
+;
+
+left join (cp_amount_temp)
+Load Distinct
+
+    sale_service_id,
+    buy_service_id
+
+Resident [sale-buy];
+
+left join (cp_amount_temp)
+Load Distinct
+
+    buy_service_id,
+    buy_service_nature
+
+Resident buy_basic;
+
+// [cp_amount_temp]:
+// noconcatenate
+// load distinct
+//     sale_service_id,
+//     IBM_Standard_Carrier_Alpha_Code,
+//     sale_creation_year,
+//     sale_service_execution_followup,
+//     Client,
+//     sale_service_start_name,
+//     sale_service_end_name
+
+// resident cp_amount_temp_1
+// //where not match(PU_Team_Responsible & sale_event_reason_code,'New CoZ12')
+// ;
+
+// drop table cp_amount_temp_1;
+
+
+left join (cp_amount_temp)
+LOAD Distinct
+
+    sale_service_id,
+    sum(sale_eur_amount) as sale_eur_amount_group
+
+resident [sale-buy]
+group by sale_service_id
+;
+
+
+
+[buy_Amount]:
+left join(cp_amount_temp)
+LOAD Distinct
+
+    sale_service_id,
+    sum(buy_eur_amount) as buy_eur_amount_group
+
+resident [sale-buy]
+group by sale_service_id;
+
+left join(cp_amount_temp)
+LOAD
+    CSO as sale_service_id,
+    'Yes' as cp_force_amount_net_flag
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'Amount';
+
+
+
+[cp_amount]:
+noconcatenate
+Load distinct
+
+    sale_service_id,
+    sale_eur_amount_group,
+    buy_eur_amount_group,
+    cp_force_amount_net_flag,
+
+        if(match(IBM_Standard_Carrier_Alpha_Code,'GF60','GF07') 
+            or Client = 'RIMOWA' and sale_service_start_name= 'CEVA WAREHOUSE'
+                or cp_force_amount_net_flag = 1
+
+                or match(Client,'BROOKAY KAYAK','BP','SOLIDIGM','COMPUTACENTER','HID') and sale_app_source = 'MPO',0,
+        
+            if(sale_creation_year = 2021,0,
+                if(buy_service_nature = 'PLANIFICATION',0,1))) as amount_flag,
+
+    sale_eur_amount_group - buy_eur_amount_group as sale_vs_buy_eur_amount,
+    (sale_eur_amount_group - buy_eur_amount_group) /  sale_eur_amount_group as sale_vs_buy_eur_amount%,
+    if(sale_eur_amount_group - buy_eur_amount_group < 0,0,1) as kpi_sale_buy_amount_diference,
+
+    if(sale_eur_amount_group - buy_eur_amount_group <= 0 and match(sale_service_execution_followup,'CL','FINISHED') ,'Incorrect',
+        if(sale_eur_amount_group = 0 and match(sale_service_execution_followup,'CL','FINISHED') or buy_eur_amount_group = 0 and match(sale_service_execution_followup,'CL','FINISHED'),'Incorrect')) as cp_sale_buy_amount_difference
+
+resident  cp_amount_temp;
+
+drop table cp_amount_temp;
+drop field sale_creation_year from cp_amount;
+drop field IBM_Standard_Carrier_Alpha_Code from cp_amount;
+drop field buy_executor_party_group_n1 from cp_amount;
+drop field buy_service_nature from cp_amount;
+drop field sale_service_execution_followup from cp_amount;
+
+
+

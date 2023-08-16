@@ -1,0 +1,31 @@
+﻿db_booking_details:
+left keep(sale_basic)
+LOAD
+    CSO as sale_service_id,
+    MAWB as db_booking_details_MAWB,
+    Origin_Port as db_booking_details_origin_port,
+    Origin_Port_Zone as db_booking_details_origin_port_zone,
+    Origin_Flight as db_booking_details_origin_flight,
+    Origin_ETD as db_booking_details_origin_ETD,
+    Origin_ATD as db_booking_details_origin_ATD,
+    Destination_ETA as db_booking_details_destination_ETA,
+    Destination_ATA as db_booking_details_destination_ATA,
+    Destination_Port as db_booking_details_destination_Port,
+    Destination_Port_Zone as db_booking_details_destination_port_zone,
+    First_Port as db_booking_details_first_port,
+    First_Port_Zone as db_booking_details_first_port_zone,
+    First_ETD as db_booking_details_first_ETD,
+    First_ATD as db_booking_details_first_ATD,
+    Last_ETA as db_booking_details_last_ETA,
+    Last_ATA as db_booking_details_last_ATA,
+    Last_Port as db_booking_details_last_port,
+    Last_Port_Zone as db_booking_details_last_port_zone,
+    Origin_ATD as db_booking_details_ATD,
+    Destination_ATA as db_booking_details_ATA,
+    Last_Check_Date as db_booking_details_last_check_date,
+    Loading_Zone as db_booking_details_loading_zone,
+    Unloading_Zone as db_booking_details_unloading_zone
+
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/MAWB_Itineraries.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+

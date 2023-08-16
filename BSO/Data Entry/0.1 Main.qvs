@@ -1,0 +1,6 @@
+let vDateBracke = date(addmonths('$(vToday)',-12),'DD/MM/YY');
+set vContractorZenith = 'IBM_FIGO','DT','SOFTLYR_MD','DC','NEWCUS','KSM','ALIGN','KYNDRYL','IBM_SO';
+set vContractorMpo = 'No','No';
+set vContractorNAP = 'IBM_FIGO','DT','SOFTLYR_MD','DC','NEWCUS','KSM','ALIGN','KYNDRYL','IBM_SO';
+set vLane = 'Inter Team','Intra Team';
+set vGeo2Geo = 'APACAPAC','APACEMEA','EMEAEMEA','EMEAAPAC';

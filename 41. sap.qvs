@@ -1,0 +1,32 @@
+sap:
+left keep(hu_items)
+LOAD
+    "Inv Number" as sap_inv_number,
+    "Inv Type" as sap_inv_tpe,
+    "Billing Date" as sap_billing_date,
+    "Sales Ord" as sap_sale_ord,
+    COATS as sap_coat,
+    Material as sap_material,
+    Model as sap_model,
+    Qty as sap_qty,
+    "Case Num" as sale_HU_case_number,
+    cases as sap_cases,
+    HAWB as sap_hawb,
+    "Gross Wght" as sap_gross_weight,
+    "Weight unit" as sap_weight_unit,
+    "Length" as sap_length,
+    Width as sap_width,
+    Height as sap_height,
+    "Volumetric Wght" as sap_volumetric_weight,
+    "Vendor Name" as sap_vendor_name,
+    Incoterms as sap_incoterms,
+    "Ship To" as sap_ship_to,
+    "Inv To" as sap_inv_to,
+    Cntry as sap_country,
+    "GI Date" as sap_gi_date,
+    "Country Name" as sap_country_name,
+    "Shipping Point/Receiving Pt" as sap_shipping_point,
+    HazMat as sap_hazmat,
+    MFGNO as sap_mfgno
+FROM [lib://Geo_AMS/POK_WH/POK shipments updated.xlsx]
+(ooxml, embedded labels, table is Sheet1);

@@ -1,0 +1,44 @@
+[cp_missing_Align_DIMC_temp]:
+LEFT Keep ([sale_basic])
+LOAD Distinct
+
+    sale_service_id
+
+resident sale_first_be
+where match(sale_event_reason_code,'10','17','35','Z06','70','14','33','53','58','59','Z11');
+
+left join(cp_missing_Align_DIMC_temp)
+load distinct
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(cp_missing_Align_DIMC_temp)
+load distinct
+    buy_service_id,
+    DIMC
+
+resident DIMC;
+
+left join(cp_missing_Align_DIMC_temp)
+load distinct
+    sale_service_id,
+    Client
+
+resident sale_basic;
+
+
+
+cp_missing_Align_DIMC:
+noconcatenate
+load distinct
+
+    buy_service_id,
+    'Incorrect' as cp_missing_Align_DIMC
+
+resident cp_missing_Align_DIMC_temp
+where Client = 'ALIGN'
+and len(trim(DIMC)) < 2;
+
+drop table cp_missing_Align_DIMC_temp;

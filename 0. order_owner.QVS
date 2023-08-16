@@ -1,0 +1,7 @@
+﻿order_owner:
+left keep(mpo_orderline)
+LOAD
+    Vendor as mpo_orderline_from_party_name,
+    Owner as order_owner
+FROM [lib://Geo_AMS/Automation/BI/BP/dist_vm.xlsx]
+(ooxml, embedded labels, table is Hoja2);

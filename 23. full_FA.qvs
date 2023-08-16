@@ -1,0 +1,194 @@
+full_FA_temp_temp:
+noconcatenate
+load distinct
+    sale_service_id,
+    sale_contractor_party,
+    sale_service_activity_report_status,
+    sale_GSP_Flag,
+    sale_executor_short_name,
+    sale_service_short_name,
+    Client,
+    sale_contractor_party_Group_N1,
+    num(AddMonths(MonthStart(sale_actual_end_date),-1),'00') as sale_actual_end_date_min_temp
+
+resident sale_basic;
+
+
+
+
+left join(full_FA_temp_temp)
+LOAD DISTINCT
+    sale_service_id,
+    sale_invoice_number as sale_full_invoice_number
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_InvoiceLines_Service.qvd] (qvd)
+;
+
+left join(full_FA_temp_temp)
+LOAD DISTINCT
+
+    sale_full_invoice_number,
+    min(sale_actual_end_date_min_temp) as sale_actual_end_date_min
+
+resident full_FA_temp_temp
+group by sale_full_invoice_number;
+
+
+
+sale_invoice_temp:
+left keep(full_FA_temp_temp)
+LOAD
+    sale_service_id,
+    sale_invoice_number as sale_full_invoice_number,
+    sale_amount_line as sale_service_full_amount_line,
+    sale_currency_line as sale_service_full_currency_line
+
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_InvoiceLines_Service.qvd] (qvd)
+where not wildmatch(sale_invoicelines_tarif_id,'002076-0-1-142-2','002076-0-2-172-*','002076-0-1-142-3','002744-0-66-34-1')
+or app_source_Sale_InvoiceLines_Service = 'MPO'
+;
+
+
+sale_invoice:
+noconcatenate
+Load
+    sale_service_id,
+    sale_full_invoice_number,
+    sum(sale_service_full_amount_line) as sale_service_full_amount_line,
+    sale_service_full_currency_line
+
+resident sale_invoice_temp group by sale_service_id, sale_full_invoice_number, sale_service_full_currency_line;
+
+drop table sale_invoice_temp;
+
+
+left join(full_FA_temp_temp)
+LOAD DISTINCT
+    
+    sale_invoice_number as sale_full_invoice_number,
+    sale_invoice_invoicing_profile_id as sale_full_invoicing_profile_id,
+    sale_invoice_status  as sale_full_invoice_status,
+    sale_invoice_accountant_date as sale_full_invoice_accountant_date,
+    sale_invoice_date as sale_full_invoice_date,
+    date(sale_invoice_creation_date) as sale_full_invoice_creation_date,
+    if(match(sale_invoice_status,'EDT','VNE','SENT_TO_CUSTOMER'),sale_invoice_update_date) as sale_full_invoice_update_date,
+    sale_invoice_amount_et as sale_full_invoice_amount_gross,
+    sale_invoice_amount_ati as sale_full_invoice_amount_net,
+    sale_invoice_currency as sale_full_invoice_currency,
+    sale_customer_invoice_reference as sale_full_customer_invoice_reference,
+    sale_invoice_type as sale_full_invoice_type,
+    sale_invoice_nature as sale_full_invoice_nature,
+    sale_invoice_internal_po_number as sale_full_invoive_internal_po_number,
+    sale_invoice_external_po_number as sale_full_invoive_external_po_number,
+    sale_invoice_creation_user_id as sale_full_invoice_creation_user_id,
+    sale_invoice_update_user_id as sale_full_invoice_update_user_id,
+    sale_invoice_part_number as sale_full_invoice_part_number,
+
+    if(sale_invoice_nature & sale_invoice_type ='F1','Original Invoice',
+        if(sale_invoice_nature & sale_invoice_type ='AA','Full Credit Note',
+            if(sale_invoice_nature & sale_invoice_type ='FA','Complementary',
+                if(sale_invoice_nature & sale_invoice_type ='A1','Partial Credit Note',sale_invoice_type)))) as sale_full_invoicing_type,
+
+        if(sale_invoice_nature = 'F','INVOICE',
+            if(sale_invoice_nature ='A','CREDIT NOTE',
+                sale_invoice_type)) as sale_full_invoicing_type_consolidated
+
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_sale_Invoice.qvd] (qvd)
+where sale_invoice_status <> 'CANCELLED'
+;
+
+full_FA_temp:
+Load distinct
+    *,
+    sale_full_invoice_currency & '-'& 'EUR' & '-'&  sale_actual_end_date_min  as sale_full_exchange_rate_id
+
+resident full_FA_temp_temp;
+
+drop table full_FA_temp_temp;
+
+sale_activity_report:
+left join(full_FA_temp)
+LOAD
+    sale_service_system_id as sale_service_id,
+    'VNL' as sale_full_finance_vnl_flag
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service.qvd]
+(qvd)
+where sale_service_activity_report_status = 'Validated Not Payable';
+
+left join(full_FA_temp)
+LOAD
+    //"ID Currency rate",
+    //"Origin currency code",
+    //"Target currency code",
+    //"Start date for rate validity",
+    "Currency rate" as sale_full_exchange_rate ,
+    "ID Currency rate"  as sale_full_exchange_rate_id
+
+FROM [lib://Geo_AMS/Automation/BI/Finance/Exchange Rate/TC_database.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq);
+
+drop fields sale_service_id, sale_actual_end_date_min_temp from full_FA_temp;
+
+full_FA:
+Load distinct
+
+sale_full_invoice_number,
+sale_full_invoicing_profile_id,
+sale_full_invoice_status,
+sale_full_invoice_accountant_date,
+sale_full_invoice_date,
+sale_full_invoice_creation_date,
+sale_full_invoice_update_date,
+sale_full_invoice_amount_gross,
+sale_full_invoice_amount_net,
+sale_full_invoice_currency,
+sale_full_customer_invoice_reference,
+sale_full_invoice_type,
+sale_full_invoice_nature,
+sale_full_invoive_internal_po_number,
+sale_full_invoive_external_po_number,
+sale_full_invoice_update_user_id,
+sale_full_invoice_creation_user_id,
+sale_full_invoice_part_number,
+sale_full_invoicing_type,
+sale_full_invoicing_type_consolidated,
+sale_full_finance_vnl_flag,
+sale_full_exchange_rate,
+sale_full_exchange_rate_id,
+if(sale_full_invoice_currency = 'EUR', sale_full_invoice_amount_gross, sale_full_exchange_rate * sale_full_invoice_amount_gross) as sale_full_invoice_eur_amount_gross,
+if(sale_full_invoice_currency = 'EUR', sale_full_invoice_amount_gross, sale_full_exchange_rate * sale_full_invoice_amount_net) as sale_full_invoice_eur_amount_net,
+
+        if(sale_full_finance_vnl_flag = 'VNL' 
+        or sale_contractor_party = 'IBM_MD_NB' 
+        or match(sale_service_activity_report_status,'Validated Not Payable')
+        or sale_GSP_Flag = 1 and sale_executor_short_name = 'SCAKEY'
+        or sale_service_short_name = 'IBM_MD_MX/SHP MX'
+        or match(Client,'HID','SOLIDIGM'), '3. Not payable',
+
+            if(isnull(sale_full_invoice_status),'2. Not Invoiced',
+
+            if(match(sale_full_invoice_status,'EDT','SENT_TO_CUSTOMER')
+            or sale_full_invoice_status = 'VNE' and match(sale_executor_short_name,'SMXKEY','SFRKEY','SHKKEY')
+            or Client = 'SOFTLAYER' and match(sale_executor_short_name,'SUSKEY','SMXKEY','SCAKEY') and sale_full_invoice_status = 'VNE'
+            or sale_contractor_party_Group_N1 = 'NEWCUS' and sale_full_invoice_status = 'VAL'
+            or match(Client,'BEST BUY','ROCKWELL','MY PARCEL') and sale_full_invoice_status = 'VAL'
+            
+            or match(sale_service_short_name,'IBM_MD_US/SHP','IBM_CA/UPS_CAD','IBMMDUS/GSPMGFEE','IBMMDUS/NCSHURON',
+            'IBMMD_US/NCS DH','IBMMDUS/NCSMFUSD','SOFT_CA/UPS_CAD','IBM_CA/UPS_CAD','IBM_MD_US/WHS',
+            'IBMMDCA/NCSUPS','IBMMDMX/BELSCRAP','IBMMDCA/NCSMFCAD','IBM_MD_US/GSP','IBM_MD_CA/EXPFEE') 
+            and sale_full_invoice_status = 'VAL'
+            
+            or match(sale_executor_short_name,'SBRKEY','SARKEY','SCLKEY','SCOKEY', 'SPEKEY') and match(sale_full_invoice_status,'VNE','VAL')
+            
+            ,'1. Invoiced','2. Not Invoiced'))) as sale_full_invoice_follow_up,
+
+    if(match(sale_executor_short_name,'SMXKEY'),sale_full_customer_invoice_reference,
+        if(wildmatch(sale_full_invoice_number,'INV*'),sale_full_invoice_part_number, sale_full_invoice_number)) as sale_full_invoice_ax_key
+
+
+resident full_FA_temp;
+
+
+drop table full_FA_temp;

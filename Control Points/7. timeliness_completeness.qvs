@@ -1,0 +1,381 @@
+
+// 31. Completeness / Timeliness AF -----------------------------------------------------------------------------------------
+[cp_completness_AF_temp_temp]:
+left keep(sale_basic)
+Load  distinct
+    sale_service_id
+
+resident sale_basic
+where //sale_start_geo = 'AMS'and 
+match(sale_service_execution_followup, 'CD','CL')
+and not match(sale_contractor_party,'BROOKAY_US')
+and not match(sale_contractor_party_Group_N1 & left(hu_reference,4),'IBM_FIGOASNS')
+and not match(net_flag,1)
+and not match(sale_contractor_party_Group_N1,'IBM_NCS')
+
+or
+
+//sale_start_geo = 'AMS' and 
+match(sale_service_execution_followup,'STARTED','FINISHED')
+and not match(net_flag,1);
+
+[cp_completness_AF_temp_temp]:
+left join(cp_completness_AF_temp_temp)
+Load  distinct
+    sale_service_id,
+    sale_event_creation_date as sale_af_event_creation_date,
+    sale_event_actual_date as sale_af_event_actual_date,
+    sale_event_actual_datetime as sale_af_event_actual_datetime,
+    sale_event_creation_datetime as sale_af_event_creation_datetime
+
+resident sale_first_be 
+where match(sale_event_code,'AF','E13','13','DLP');
+
+[cp_completness_AF_temp]:
+noconcatenate
+Load  distinct
+    sale_service_id,
+    min(sale_af_event_creation_date) as sale_af_event_creation_date,
+    min(sale_af_event_actual_date) as sale_af_event_actual_date,
+    min(sale_af_event_actual_datetime) as sale_af_event_actual_datetime,
+    min(sale_af_event_creation_datetime) as sale_af_event_creation_datetime
+
+resident cp_completness_AF_temp_temp
+group by sale_service_id;
+
+
+drop table cp_completness_AF_temp_temp;
+
+
+
+[cp_completness_AF_temp]:
+left join(cp_completness_AF_temp)
+Load  distinct
+    sale_service_id,
+    if(len(trim(sale_event_code)) > 1,'Correct','No Pickup Event') as cp_completness_AF_temp
+
+resident sale_first_be 
+where match(sale_event_code,'AF','E13','13');
+
+
+
+[cp_completness_AF_temp]:
+left join(cp_completness_AF_temp)
+load distinct
+    sale_service_id,
+    if((networkdays(sale_af_event_actual_date,sale_af_event_creation_date)-1) <= 1,1,0) as kpi_timeliness_AF,
+    (networkdays(sale_af_event_actual_date,sale_af_event_creation_date)-1) as kpi_timeliness_AF_days
+
+resident cp_completness_AF_temp;
+
+left join(cp_completness_AF_temp)
+LOAD
+    CSO as sale_service_id,
+    'Yes' as net_cp_completness_AF,
+    Category as category_completness_AF
+    
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'Completness AF';
+
+left join(cp_completness_AF_temp)
+LOAD
+    CSO as sale_service_id,
+    1 as net_timeliness_pu,
+    Category as category_net_timeliness_pu
+    
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'Timeliness PU';
+
+left join(cp_completness_AF_temp)
+load distinct
+    sale_service_id,
+    sale_event_reason_code
+
+resident sale_first_be
+where match(sale_event_reason_code,'Z12','Z50');
+
+[cp_completness_AF]:
+noconcatenate
+Load distinct
+
+    sale_service_id,
+    if(isnull(cp_completness_AF_temp),'No Pickup Event',cp_completness_AF_temp) as cp_completness_AF,
+    if(isnull(net_cp_completness_AF),'No',net_cp_completness_AF) as net_cp_completness_AF,
+    category_completness_AF
+
+resident cp_completness_AF_temp
+where len(trim(sale_event_reason_code)) < 2
+//where len(net_cp_completness_AF) < 2
+;
+
+drop field cp_completness_AF_temp;
+
+
+[kpi_timeliness_AF_temp]:
+noconcatenate
+Load distinct
+
+    sale_service_id,
+    sale_af_event_creation_date,
+    kpi_timeliness_AF,
+    kpi_timeliness_AF_days,
+    net_timeliness_pu,
+    category_net_timeliness_pu,
+    sale_af_event_actual_date,
+    sale_af_event_actual_datetime,
+    sale_af_event_creation_datetime
+
+resident cp_completness_AF_temp;
+
+
+Drop Table  cp_completness_AF_temp;
+
+
+[kpi_timeliness_AF]:
+noconcatenate
+Load distinct
+
+    sale_service_id,
+    sale_af_event_actual_date,
+    sale_af_event_creation_date,
+    sale_af_event_actual_datetime,
+    sale_af_event_creation_datetime,
+    kpi_timeliness_AF,
+    kpi_timeliness_AF_days,
+    category_net_timeliness_pu,
+    if(kpi_timeliness_AF_days <= 0, 'Less than 24 hrs',
+        if(kpi_timeliness_AF_days = 1 and hour(sale_af_event_actual_datetime) >= hour(sale_af_event_creation_datetime), 'Less than 24 hrs',
+            if(kpi_timeliness_AF_days <= 2, 'Less than 48 hrs',
+                if(kpi_timeliness_AF_days <= 5, 'Less than 5 Days', 'Out time')))) as kpi_timeliness_AF_aging,
+    
+    if( net_timeliness_pu <= 1, 'Less than 24 hrs',
+        if(kpi_timeliness_AF_days <= 1, 'Less than 24 hrs',
+            if(kpi_timeliness_AF_days <= 2, 'Less than 48 hrs',
+                if(kpi_timeliness_AF_days <= 5, 'Less than 5 Days', 'Out time')))) as kpi_timeliness_AF_net_aging
+
+resident [kpi_timeliness_AF_temp]
+;
+
+Drop Table  kpi_timeliness_AF_temp;
+
+
+
+[cp_completness_AF_report]:
+noconcatenate
+Load distinct
+
+    sale_service_id,
+    cp_completness_AF
+
+resident cp_completness_AF
+where cp_completness_AF = 'No Pickup Event'
+and net_cp_completness_AF = 'No'
+;
+
+
+left join(cp_completness_AF_report)
+load distinct
+    sale_service_id,
+    sale_service_execution_followup,
+    sale_start_country,
+    sale_end_country,
+    sale_creation_date,
+    sale_service_short_name,
+    ConsolidatedAWB,
+    hu_reference,
+    Client
+
+resident sale_basic;
+
+
+
+//Store [cp_completness_AF_report] into [lib://Geo_AMS/LogisticsAnalyst/Plugins/Reports/cp_completness_AF_report.csv](txt);
+
+drop table cp_completness_AF_report;
+
+
+// 32. Completeness / Timeliness  D -----------------------------------------------------------------------------------------
+
+[cp_completness_D_temp_temp]:
+noconcatenate
+Load  distinct
+    sale_service_id
+
+resident sale_basic
+where //sale_end_geo = 'AMS'and 
+
+match(sale_service_execution_followup,'CL','FINISHED')
+and not match(sale_contractor_party,'BROOKAY_US')
+and not match(sale_contractor_party_Group_N1 & left(hu_reference,4),'IBM_FIGOASNS')
+and not match(net_flag,1)
+
+
+;
+
+
+left join(cp_completness_D_temp_temp)
+Load 
+    sale_service_id,
+    sale_event_creation_date as sale_d_event_creation_date,
+    sale_event_actual_date as sale_d_event_actual_date,
+    sale_event_actual_datetime as sale_d_event_actual_datetime,
+    sale_event_creation_datetime as sale_d_event_creation_datetime
+    
+
+resident sale_first_be 
+where match(sale_event_code,'D','X1','E21','21','A21','POD');
+
+
+
+[cp_completness_D_temp]:
+noconcatenate
+Load 
+    sale_service_id,
+    min(sale_d_event_creation_date) as sale_d_event_creation_date,
+    min(sale_d_event_actual_date) as sale_d_event_actual_date,
+    min(sale_d_event_actual_datetime) as sale_d_event_actual_datetime,
+    min(sale_d_event_creation_datetime) as sale_d_event_creation_datetime
+
+
+resident cp_completness_D_temp_temp 
+group by sale_service_id;
+
+drop table cp_completness_D_temp_temp;
+
+
+
+
+left join(cp_completness_D_temp)
+load distinct
+    sale_service_id,
+    if((networkdays(sale_d_event_actual_date,sale_d_event_creation_date)-1) <= 1,1,0) as kpi_timeliness_D,
+    (networkdays(sale_d_event_actual_date,sale_d_event_creation_date)-1) as kpi_timeliness_D_days
+
+resident cp_completness_D_temp;
+
+
+left join (cp_completness_D_temp)
+LOAD
+    CSO as sale_service_id,
+    'Yes' as net_cp_completness_D,
+    Category as category_completness_D
+    
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'Completness D';
+
+
+left join(cp_completness_D_temp)
+LOAD
+    CSO as sale_service_id,
+    1 as net_timeliness_del,
+    Category as category_net_timeliness_del
+    
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'Timeliness DEL';
+
+left join(cp_completness_D_temp)
+load distinct
+    sale_service_id,
+    sale_event_reason_code
+
+resident sale_first_be
+where sale_event_reason_code =  'Z12';
+
+
+[cp_completness_D]:
+noconcatenate
+Load distinct
+
+    sale_service_id,
+    if(len(trim(sale_d_event_actual_date)) <1, 'No Delivery Event','Correct') as cp_completness_D,
+    if(isnull(net_cp_completness_D),'No',net_cp_completness_D) as net_cp_completness_D,
+    category_completness_D
+
+resident cp_completness_D_temp
+where len(trim(sale_event_reason_code)) < 2 
+;
+
+
+
+
+kpi_timeliness_D_temp:
+noconcatenate
+load distinct
+    sale_service_id,
+    kpi_timeliness_D,
+    kpi_timeliness_D_days,
+    net_timeliness_del,
+    category_net_timeliness_del,
+    sale_d_event_creation_date,
+    sale_d_event_actual_date,
+    sale_d_event_actual_datetime,
+    sale_d_event_creation_datetime
+
+resident cp_completness_D_temp;
+
+Drop Table  cp_completness_D_temp;
+
+[kpi_timeliness_D]:
+noconcatenate
+Load distinct
+
+    sale_service_id,
+    kpi_timeliness_D,
+    kpi_timeliness_D_days,
+    category_net_timeliness_del,
+    sale_d_event_creation_date,
+    sale_d_event_actual_date,
+    sale_d_event_actual_datetime,
+    sale_d_event_creation_datetime,
+
+    if(kpi_timeliness_D_days <= 0, 'Less than 24 hrs',
+        if(kpi_timeliness_D_days = 1 and hour(sale_d_event_actual_datetime) >= hour(sale_d_event_creation_datetime), 'Less than 24 hrs',
+        if(kpi_timeliness_D_days <= 2, 'Less than 48 hrs',
+            if(kpi_timeliness_D_days <= 5, 'Less than 5 Days', 'Out time')))) as kpi_timeliness_D_aging,
+
+    if(net_timeliness_del <= 1, 'Less than 24 hrs',
+        if(kpi_timeliness_D_days <= 1, 'Less than 24 hrs',
+            if(kpi_timeliness_D_days <= 2, 'Less than 48 hrs',
+                if(kpi_timeliness_D_days <= 5, 'Less than 5 Days', 'Out time')))) as kpi_timeliness_D_net_aging
+    
+
+resident kpi_timeliness_D_temp;
+
+Drop Table  kpi_timeliness_D_temp;
+
+
+//exit script;
+[cp_completness_D_report]:
+noconcatenate
+Load distinct
+
+    sale_service_id,
+    cp_completness_D
+
+resident cp_completness_D
+where cp_completness_D = 'No Delivery Event'
+and net_cp_completness_D = 'No';
+
+
+left join(cp_completness_D_report)
+load distinct
+    sale_service_id,
+    sale_service_execution_followup,
+    sale_start_country,
+    sale_end_country,
+    sale_creation_date,
+    sale_service_short_name,
+    ConsolidatedAWB,
+    hu_reference
+
+resident sale_basic;
+
+
+
+//Store [cp_completness_D_report] into [lib://Geo_AMS/LogisticsAnalyst/Plugins/Reports/cp_completness_D_report.csv](txt);
+
+drop table cp_completness_D_report;

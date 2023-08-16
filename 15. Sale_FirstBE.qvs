@@ -1,0 +1,41 @@
+[sale_first_be]:
+Left Keep(sale_basic)
+LOAD
+    sale_service_id,
+    sale_event_code,
+    sale_event_reason_code,
+    sale_event_creation_datetime,
+    sale_event_creation_date, 
+    sale_event_creation_timezone,
+    //sale_event_creation_datetime_utc as cso_event_creation_datetime_utc,
+    //sale_event_creation_date_utc as cso_event_creation_date_utc,
+    sale_event_actual_datetime,
+    sale_event_actual_date,
+    if(sale_event_actual_date > sale_event_creation_date,'Incorrect','Correct') as sale_event_timeliness,
+    sale_event_actual_timezone,
+    //sale_event_actual_datetime_utc as cso_event_actual_datetime_utc,
+    //sale_event_actual_date_utc as cso_event_actual_date_utc,
+    sale_event_estimated_datetime,
+    sale_event_estimated_date,
+    sale_event_country_zone_location,
+    sale_event_user_creation,
+    sale_event_user_update,
+    if(sale_event_country_zone_location = 'CN CN','CN',sale_event_country_zone_location) as sale_event_country
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_BE.qvd]
+(qvd)where app_source = 'Zenith'
+
+
+or app_source = 'MPO'
+;
+
+[sale_event_wording]:
+left keep(sale_first_be)
+LOAD
+    "Event Code" as sale_event_code,
+    Name as sale_event_wording
+
+FROM [lib://Geo_AMS/Automation/BI/Events/Events Translate.xlsx]
+(ooxml, embedded labels, table is [BE Translate]);
+
+

@@ -1,0 +1,63 @@
+[hu_compum]:
+Left keep([sale_basic])
+LOAD
+	
+	sale_service_id,
+	sale_hu_compum_length_m & 'x' & sale_hu_compum_height_m & 'x' & sale_hu_compum_width_m as sale_hu_LxHxW_M3,
+    sale_hu_compum_length_m * sale_hu_compum_height_m * sale_hu_compum_width_m as sale_hu_volume_m3,
+    sale_hu_compum_length_m,
+    sale_hu_compum_height_m,
+    sale_hu_compum_width_m,
+    sale_hu_compum_weight_unit,
+    sale_hu_compum_weight_kg,
+    sale_hu_compum_internal_id,
+    sale_hu_compum_shipping_unit
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_HU_compum.qvd] (qvd);
+
+[hu_items_qty]:
+left join(hu_compum)
+Load distinct
+    sale_service_id,
+    count(sale_hu_compum_internal_id) as sale_hu_qty
+
+resident [hu_compum] group by sale_service_id;
+
+
+hu_items:
+left Keep(hu_compum)
+LOAD
+    //sale_service_id,
+    if(isnull(sale_hu_case_id),'',sale_hu_case_id) as sale_HU_case_number,
+    sale_final_customer_order_number as sale_COAT,
+    sale_Itemum_invoice_number as sale_hu_invoice_number,
+    sale_vendor_part_number as sale_part_number,
+    sale_item_description,
+    sale_HU_compum_internal_id as sale_hu_compum_internal_id
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_HU_compum_item.qvd]
+(qvd);
+
+
+
+
+items_sale_service_temp:
+left keep(sale_basic)
+Load  distinct
+
+    sale_service_id,
+    sale_item_description
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_HU_compum_item.qvd]
+(qvd);
+
+
+items_sale_service:
+Noconcatenate
+Load
+    sale_service_id,
+    concat(sale_item_description,', ') as sale_item_description_concat
+
+resident items_sale_service_temp group by sale_service_id;
+
+drop table items_sale_service_temp;

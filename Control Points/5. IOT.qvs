@@ -1,0 +1,43 @@
+//16. IOT ------------------------------------------------------------------------------------------------------------
+[cp__IOT_BE_temp]:
+left keep(sale_basic)
+Load  distinct
+    sale_service_id
+
+resident sale_basic
+where match(IBM_IOT_Flag, '1')
+and sale_start_geo = 'AMS'
+and not match(net_flag,1);
+
+
+[cp__IOT_BE_temp]:
+left join(cp__IOT_BE_temp)
+Load  distinct
+    sale_service_id,
+    if(len(trim(sale_event_code)) > 1,'Correct','No IOT Event') as cp_iot_event_temp
+
+resident sale_first_be
+where match(sale_event_code,'IOT','S');
+
+CP_Netting_IoT:
+left join(cp__IOT_BE_temp)
+LOAD
+    CSO as sale_service_id,
+    'Yes' as CP_IoT_Net
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'IoT';
+
+
+[cp__IOT_BE]:
+noconcatenate
+Load distinct
+    sale_service_id,
+    if(CP_IoT_Net = 'Yes','Correct',if(isnull(cp_iot_event_temp),'Incorrect','Correct')) as cp_iot_event
+    
+
+resident cp__IOT_BE_temp
+;
+
+drop field cp_iot_event_temp;
+Drop Table  cp__IOT_BE_temp;

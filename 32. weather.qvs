@@ -1,0 +1,104 @@
+pu_weather:
+left keep(sale_basic)
+LOAD
+    datetime as pu_weather_datetime,
+    //datetimeEpoch,
+    //tempmax,
+    //tempmin,
+    //temp,
+    //feelslikemax,
+    //feelslikemin,
+    //feelslike,
+    //dew,
+    //humidity,
+    //precip,
+    //precipprob,
+    //precipcover,
+    //preciptype,
+    //snow,
+    //snowdepth,
+    //windgust,
+    //windspeed,
+    //winddir,
+    //pressure,
+    //cloudcover,
+    //visibility,
+    //solarradiation,
+    //solarenergy,
+    //uvindex,
+    //severerisk,
+    //sunrise,
+    //sunriseEpoch,
+    //sunset,
+    //sunsetEpoch,
+    //moonphase,
+    //conditions,
+    description as pu_weather_description,
+    icon as pu_weather,
+    if(match(icon,'rain','snow','wind'),'Risk','Unrisk') as  pu_risk_flag,
+    //stations,
+    //source,
+    //"hours",
+    weather_city as sale_start_city_country
+    //status
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/weather.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where date(datetime) = '$(vToday)';
+
+
+del_weather:
+left keep(sale_basic)
+LOAD
+    datetime as del_weather_datetime,
+    //datetimeEpoch,
+    //tempmax,
+    //tempmin,
+    //temp,
+    //feelslikemax,
+    //feelslikemin,
+    //feelslike,
+    //dew,
+    //humidity,
+    //precip,
+    //precipprob,
+    //precipcover,
+    //preciptype,
+    //snow,
+    //snowdepth,
+    //windgust,
+    //windspeed,
+    //winddir,
+    //pressure,
+    //cloudcover,
+    //visibility,
+    //solarradiation,
+    //solarenergy,
+    //uvindex,
+    //severerisk,
+    //sunrise,
+    //sunriseEpoch,
+    //sunset,
+    //sunsetEpoch,
+    //moonphase,
+    //conditions,
+    description as del_weather_description,
+    icon as del_weather,
+    if(match(icon,'rain','snow','wind'),'Risk','Unrisk') as  del_risk_flag,
+    //stations,
+    //source,
+    //"hours",
+    weather_city as sale_end_city_country
+    //status
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/weather.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where date(datetime) = '$(vToday)';
+
+weather_comments:
+left keep(sale_basic)
+load distinct
+
+    sale_service_id,
+    weather_comment
+    
+FROM [lib://Geo_AMS/Automation/BI/Weather/Weather.xlsx]
+(ooxml, embedded labels, table is Hoja1);

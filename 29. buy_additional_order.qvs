@@ -1,0 +1,63 @@
+[sale_additional]:
+left keep(sale_basic)
+LOAD
+//     APP_Source,
+     sale_buy_facts_system_id as sale_additional_order,
+//    sale_service_system_id as sale_additional_order,
+//     buy_service_id,
+//     buy_service_system_id,
+//     buy_service_type,
+//     buy_service_top_start,
+//     buy_service_top_end,
+//     buy_service_distance,
+//     buy_service_estimated_start_date_before,
+//     buy_service_estimated_start_date_after,
+//     buy_service_actual_start_date,
+//     buy_service_estimated_end_date_before,
+//     buy_service_estimated_end_date_after,
+//     buy_service_actual_end_date,
+//     NbSaleServicesLeg,
+//     NbSaleServicesGrouped,
+//     devise,
+//     sale_amount_ht,
+//     sale_amount_ht_YtdEur,
+//     sale_amount_ht_BudjetdEur,
+//     buy_amount_ht as buy_additional_order_local_amount,
+//     buy_amount_ht_YtdEur,
+//     buy_amount_ht_BudjetEur,
+//     sale_buy_margin_amount,
+//     sale_buy_margin_amount_YtdEur,
+//     sale_buy_margin_amount_BudgetEur,
+//     margin_rate,
+//     record_date,
+//     sale_amount_ht_YtdEur_rate,
+//     sale_amount_ht_BudjetdEur_rate,
+//     buy_amount_ht_YtdEur_rate,
+//     buy_amount_ht_BudjetEur_rate,
+//     sale_buy_margin_amount_YtdEur_rate,
+//     sale_buy_margin_amount_BudgetEur_rate
+    sale_service_id
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Buy_Facts.qvd]
+(qvd);
+
+
+sale_buy_additional:
+left keep(sale_additional)
+LOAD distinct
+    //buy_additional_service_system_id,
+    buy_additional_service_id as buy_additional_order,
+    sale_buy_facts_system_id as sale_additional_order
+    //sale_buy_additional_service_record_date,
+    //sale_buy_additional_service_app_source
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Buy_Additional_Service_Facts.qvd]
+(qvd);
+
+buy_additional:
+left keep(sale_additional)
+LOAD
+    //buy_additional_service_system_id,
+    buy_additional_service_id as buy_additional_order,
+    buy_additional_service_local_currency as buy_additional_order_local_currency,
+    buy_additional_service_local_amount as buy_additional_order_local_amount
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_Additional_Service.qvd]
+(qvd);

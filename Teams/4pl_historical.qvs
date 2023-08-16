@@ -1,0 +1,69 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Teams/0.1 Main 4pl_historical.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/12. Specific_data_all_clients_buy.qvs]);
+
+Plants:
+left join (sale_basic)
+LOAD
+    "Zip code" as sale_start_zip_code,
+    Plant as sale_plant
+FROM [lib://Geo_AMS/LogisticsAnalyst/EOM/Plants.xlsx]
+(ooxml, embedded labels, table is Plants);
+
+
+end_month_brackets:
+NoConcatenate
+load
+	sale_service_id,
+    if(MonthEnd(sale_creation_date,0) - sale_creation_date < 1,'Last Day of Month',
+    	if(date(MonthEnd(sale_creation_date)-1) - sale_creation_date < 1,'1 Day Prior to EOM',
+        	if(date(MonthEnd(sale_creation_date)-2) - sale_creation_date < 1,'2 Day Prior to EOM',
+    			'Rest of the month'))) as sale_end_month_aging,
+
+	if(date(MonthEnd(sale_creation_date)-2) - sale_creation_date < 1,'Endmonth','Rest of the month') as sale_end_month
+
+Resident sale_basic;
+
+[hu_compum]:
+Left keep([sale_basic])
+LOAD
+    
+    sale_service_id,
+    sale_hu_compum_length_m & 'x' & sale_hu_compum_height_m & 'x' & sale_hu_compum_width_m as sale_hu_LxHxW_M3,
+    sale_hu_compum_length_m * sale_hu_compum_height_m * sale_hu_compum_width_m as sale_hu_volume_m3,
+    sale_hu_compum_length_m,
+    sale_hu_compum_height_m,
+    sale_hu_compum_width_m,
+    sale_hu_compum_weight_unit,
+    sale_hu_compum_weight_kg,
+    sale_hu_compum_internal_id,
+    sale_hu_compum_shipping_unit
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_HU_compum.qvd] (qvd);
+
+[hu_items_qty]:
+left join(hu_compum)
+Load distinct
+    sale_service_id,
+    count(sale_hu_compum_internal_id) as sale_hu_qty
+
+resident [hu_compum] group by sale_service_id;
+
+
+hu_items:
+left Keep(hu_compum)
+LOAD
+    //sale_service_id,
+    if(isnull(sale_hu_case_id),'',sale_hu_case_id) as sale_HU_case_number,
+    sale_final_customer_order_number as sale_COAT,
+    sale_Itemum_invoice_number as sale_hu_invoice_number,
+    sale_vendor_part_number as sale_part_number,
+    sale_item_description,
+    sale_HU_compum_internal_id as sale_hu_compum_internal_id
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_HU_compum_item.qvd]
+(qvd);
+

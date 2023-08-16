@@ -1,0 +1,209 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+
+
+
+left join(sale_basic)
+ LOAD
+  sale_service_id,  
+  Client & sale_executed_SLA & sale_start_state & sale_end_state as Key_state_to_state,
+  Client & sale_executed_SLA & sale_start_city & sale_end_city as key_city_to_city,
+  Client & sale_start_country & sale_end_country & sale_executed_SLA as key_country_to_country
+  
+
+resident [sale_basic];   
+
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/14. DIMC.qvs]);
+
+
+//cpm----------------------------------------------------------------
+cpm_state_to_state:
+left keep(sale_basic)
+LOAD
+    TT as cpm_state_to_state_TT,
+    Key_state_to_state
+FROM [lib://Geo_AMS/Automation/BI/CPM/CPM.xlsx]
+(ooxml, embedded labels, table is [MATRIZ state_to_state]);
+
+
+cpm_city_to_city:
+left keep(sale_basic)
+LOAD
+    TT as cpm_city_to_city_TT,
+    key_city_to_city
+FROM [lib://Geo_AMS/Automation/BI/CPM/CPM.xlsx]
+(ooxml, embedded labels, table is [MATRIX city_to_city]);
+
+cpm_country_to_country:
+left keep(sale_basic)
+LOAD
+    TT as cpm_country_to_country_TT,
+    key_country_to_country
+FROM [lib://Geo_AMS/Automation/BI/CPM/CPM.xlsx]
+(ooxml, embedded labels, table is [MATRIX country_to_country]);
+
+
+//---------------------------------------------------------------------------------------
+cpm_TT_state_to_state_temp:
+Noconcatenate
+load
+    sale_service_id,
+    Key_state_to_state,
+    sale_transit_time,
+    sale_end_zip_code
+
+resident sale_basic;
+
+left join(cpm_TT_state_to_state_temp)
+load 
+    Key_state_to_state,
+    cpm_state_to_state_TT,
+    1 as flag
+
+resident cpm_state_to_state;
+
+
+cpm_TT_state_to_state:
+Noconcatenate
+load 
+    sale_service_id,
+    if(sale_transit_time <= cpm_state_to_state_TT,'Correct','Incorrect') as cpm_state_to_state_kpi
+
+resident cpm_TT_state_to_state_temp
+where flag = 1;
+
+drop table cpm_TT_state_to_state_temp;
+
+
+
+//-------------------------------------------------------------------------------
+
+cpm_TT_city_to_city_temp:
+Noconcatenate
+load
+    sale_service_id,
+    key_city_to_city,
+    sale_transit_time,
+    sale_end_zip_code
+
+resident sale_basic;
+
+left join(cpm_TT_city_to_city_temp)
+load 
+    key_city_to_city,
+    cpm_city_to_city_TT,
+    1 as flag
+
+resident cpm_city_to_city;
+
+
+
+cpm_TT_city_to_city:
+Noconcatenate
+load 
+    sale_service_id,
+    if(sale_transit_time <= cpm_city_to_city_TT,'Correct','Incorrect') as cpm_city_to_city_kpi
+
+resident cpm_TT_city_to_city_temp
+where flag = 1;
+
+drop table cpm_TT_city_to_city_temp;
+
+//-------------------------------------------------------------------------------
+
+cpm_TT_country_to_country_temp:
+Noconcatenate
+load
+    sale_service_id,
+    key_country_to_country,
+    sale_transit_time,
+    sale_end_zip_code
+
+resident sale_basic;
+
+left join(cpm_TT_country_to_country_temp)
+load 
+    key_country_to_country,
+    cpm_country_to_country_TT,
+    1 as flag
+
+resident cpm_country_to_country;
+
+
+cpm_TT_country_to_country:
+Noconcatenate
+load 
+    sale_service_id,
+    if(sale_transit_time <= cpm_country_to_country_TT,'Correct','Incorrect') as cpm_country_to_country_kpi
+
+resident cpm_TT_country_to_country_temp
+where flag = 1;
+
+drop table cpm_TT_country_to_country_temp;
+
+
+
+// Full KPI --------------------------------------------------------------------------------------------
+
+full_KPI_temp:
+noconcatenate
+load distinct
+    sale_service_id
+
+resident sale_basic;
+
+
+full_KPI_temp_1:
+noconcatenate
+load distinct
+    sale_service_id,
+    cpm_state_to_state_kpi as cpm_kpi_tt,
+    1 as tt_flag
+
+resident cpm_TT_state_to_state;
+
+
+concatenate(full_KPI_temp_1)
+load distinct
+    sale_service_id,
+    cpm_city_to_city_kpi as cpm_kpi_tt,
+    1 as tt_flag
+
+resident cpm_TT_city_to_city;
+
+
+concatenate(full_KPI_temp_1)
+load distinct
+    sale_service_id,
+    cpm_country_to_country_kpi as cpm_kpi_tt,
+    1 as tt_flag
+
+resident cpm_TT_country_to_country;
+
+
+
+
+left join(full_KPI_temp)
+load distinct 
+    *
+resident full_KPI_temp_1;
+
+drop table full_KPI_temp_1;
+
+
+Store [full_KPI_temp] into [lib://Geo_AMS/Automation\BI\Plugins/Reports/cpm/cpm.csv](txt);
+
+
+
+full_KPI:
+noconcatenate
+load distinct   
+    *   
+resident full_KPI_temp;
+
+drop table full_KPI_temp;

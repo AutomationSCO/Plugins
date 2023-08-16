@@ -1,0 +1,490 @@
+﻿$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/HID/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/12. Specific_data_all_clients_buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/15. Sale_FirstBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/16. Buy_LastBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/21. eorder_HU.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/27. buy_finance_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/44. sale_first_be_sort.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/50. hid_sale_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/65. sale_last_be.qvs]);
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/7. timeliness_completeness.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/31. net_on_time.qvs]);
+
+//Eorder ---------------------------------------------------------------------------------------
+[Eorder_Shipment]: //Shipments - Kyndryl
+LOAD Distinct
+
+    sale_service_id AS hu_reference,
+    sale_service_status as eorder_shipment_status_id,
+    sale_service_business_scope_path as eorder_shipment_client_path,
+    sale_service_creation_user_name & ' ' &  sale_service_creation_user_last_name as eorder_shipment_creation_user,
+    sale_service_creation_user_email as eorder_shipment_creation_user_email,
+    sale_service_Start_Logistic_Point_Code as eorder_shipment_Start_Logistic_Point_Code,
+    sale_service_Start_Logistic_Point_Short_Name as eorder_shipment_Start_Logistic_Point_Short_Name,
+    sale_service_Start_Logistic_Point_Corporate_Name as eorder_shipment_Start_Logistic_Point_Corporate_Name,
+    sale_service_Start_Logistic_Point_Type as eorder_shipment_Start_Logistic_Point_Type,
+    sale_service_End_Logistic_Point_Code as eorder_shipment_End_Logistic_Point_Code,
+    sale_service_End_Logistic_Point_Short_Name as eorder_shipment_End_Logistic_Point_Short_Name,
+    sale_service_End_Logistic_Point_Corporate_Name as eorder_shipment_End_Logistic_Point_Corporate_Name,
+    sale_service_End_Logistic_Point_Type as eorder_shipment_End_Logistic_Point_Type,
+    sale_service_start_name as eorder_shipment_start_name,
+    sale_service_start_address as eorder_shipment_start_address,
+    sale_service_update_date as eorder_shipment_update_date,
+    sale_creation_date as eorder_shipment_creation_date,
+    sale_service_shipper_reference as eorder_shipment_shipper_reference,
+    sale_service_receiver_reference as eorder_shipment_receiver_reference,
+    sale_service_update_date as eorder_shipment_service_update_date,
+    sale_start_country as eorder_shipment_start_country,
+    sale_start_zone as eorder_shipment_start_zipcode,
+    sale_start_city as eorder_shipment_start_city,
+    sale_end_country as eorder_shipment_end_country,
+    sale_end_zone as eorder_shipment_end_zipcode,
+    sale_end_city as eorder_shipment_end_city,
+    sale_service_end_address as eorder_shipment_end_address,
+    sale_service_end_name as eorder_shipment_end_name,
+    sale_planned_start_datetime_before as eorder_shipment_planned_start_date,
+    sale_planned_end_datetime_before as eorder_shipment_planned_end_date,
+    sale_service_nature as eorder_shipment_service_nature,
+
+    
+    if(wildmatch(sale_service_business_scope_path,'GEODIS.Kyndryl*'),'GEODIS.Kyndryl',
+        if(wildmatch(sale_service_business_scope_path,'GEODIS.Align*'),'GEODIS.Align',
+        if(wildmatch(sale_service_business_scope_path,'GEODIS.IBM*'),'GEODIS.IBM',
+        if(wildmatch(sale_service_business_scope_path,'GEODIS.HID*'),'GEODIS.HID',
+        )))) as eorder_shipment_business_parent_scope_name
+
+FROM [lib://SCO-BI-Common Shared Data  Transormed/Geoflow_Sale_Service_Transformed.qvd] (qvd)
+//Recordar cambiar en CSO.qvs
+WHERE APP_Source = 'eOrder' 
+and wildmatch(sale_service_business_scope_path,'GEODIS.HID*')
+and sale_service_status <> 'CANCELLED'
+and not match(sale_service_id,'GAAA294268','GAAA296365')
+;
+
+[live_agent_temp]:
+LOAD
+    "Código del paí­s" as live_agent_ticket,
+    Id as live_agent_id,
+    //"Channel Type" as live_agent_channel,
+    date("Create Date",'DD/MM/YYYY hh:mm:ss') as live_agent_creation_date,
+    "Change Date" as live_agent_change_date,
+    "Status Changed Date" as live_agent_status_chenaged_date,
+    date("Resolve Date",'DD/MM/YYYY hh:mm:ss') as live_agent_resolve_date,
+    "Fecha de vencimiento" as live_agent_due_date,
+    "Reopen Date" as live_agent_reopen_date,
+    //"Tag Ids" as live_agent_tag_ids,
+    "Tag Names" as live_agent_tag_name,
+    Asunto as live_agent_subject,
+    //"Vista previa" as live_agent_preview,
+    //"Mensajes entrantes" as live_agent_messange_input,
+    //"Correo saliente" as live_agent_messange_output,
+    Estado as live_agent_status,
+
+        if(Estado = 'C' or Estado = 'N' or Estado = 'A', 'Open',
+            if(Estado = 'R', 'Resolved',
+                if(Estado = 'W', 'Postponed'))) as live_agent_status_name,
+    "Agent Name" as live_agent_agent_name,
+    //"Agent Id" as live_agent_agent_id,
+    "Department Name" as live_agent_department_name,
+    //"Department Id" as live_agent_department_id,
+    "Level Id" as live_agent_level_id,
+    //"User Id" as live_agent_user_id,
+    Nombre as live_agent_name,
+    Apellidos as live_agent_last_name,
+    //"System Name" as live_agent_system_name,
+    //"Contact Id" as live_agent_contact_id,
+    //"Parent Id" as live_agent_parent_id,
+    Emails as live_agent_emails,
+    //"Group Ids" as live_agent_group_id,
+    "Group Names" as live_agent_group_name,
+    //Nota as live_agent_notes,
+    //"Role Id" as live_agent_role_id,
+    if(wildmatch("Tag Names" ,'*9Duplicated*'),'Duplicated','Correct') as live_agent_duplicated_flag,
+
+
+    if(wildmatch("Tag Names" ,'*Routine*'),'Routine',
+        if(wildmatch("Tag Names" ,'*Urgent*'),'Urgent',
+            if(wildmatch("Tag Names" ,'*Vital*'),'Vital', 'No SL' ))) as live_agent_sl,
+
+    if(wildmatch("Tag Names" ,'*UPS*'),'UPS',
+        if(wildmatch("Tag Names" ,'*Kuehne*'),'KN',
+            if(wildmatch("Tag Names" ,'*U-Freight*'),'U-Freight','N/A'))) as live_agent_carrier,
+
+    if(wildmatch("Tag Names" ,'*Current Status*'),'Current Status',
+        if(wildmatch("Tag Names" ,'*Special tracking*'),'Special tracking',
+            if(wildmatch("Tag Names" ,'*Reason for delay*'),'Reason for delay',
+                if(wildmatch("Tag Names" ,'*Downgrade / Upgrade *'),'Downgrade / Upgrade ',
+                    if(wildmatch("Tag Names" ,'*Downgrade approval*'),'Downgrade approval',
+                        if(wildmatch("Tag Names" ,'*Documentation*'),'Documentation',
+                            if(wildmatch("Tag Names" ,'*Incident Investigation*'),'Incident Investigation',
+                                if(wildmatch("Tag Names" ,'*HID Escalation*'),'HID Escalation',
+                                    if(wildmatch("Tag Names" ,'*Transportation Quote*'),'Transportation Quote',
+                                        if(wildmatch("Tag Names" ,'*Vendor escalation*'),'Vendor escalation',
+                                            if(wildmatch("Tag Names" ,'*Vendor contact*'),'Vendor contact',
+                                                if(wildmatch("Tag Names" ,'*Shipping instruction*'),'Shipping instructions',
+                                                    if(wildmatch("Tag Names" ,'*eOrder discrepancy*'),'eOrder discrepancy',
+                                                        if(wildmatch("Tag Names" ,'*Manual Pick up request*'),'Manual Pick up request',
+                                                            if(wildmatch("Tag Names" ,'*SO discrepancy*'),'SO discrepancy',
+                                                                if(wildmatch("Tag Names" ,'*LSP escalation*'),'LSP escalation',
+                                                                    if(wildmatch("Tag Names" ,'*IT support*'),'IT support',
+                                                                        if(wildmatch("Tag Names" ,'*Attempted Pick Up*'),'Attempted Pick Up',
+                                                                            if(wildmatch("Tag Names" ,'*Claim*'),'Claim',
+                                                                                if(wildmatch("Tag Names" ,'*Manual booking request*'),'Manual booking request' ,
+                                                                                    if(wildmatch("Tag Names" ,'*Upgrade approval*'),'Upgrade approval' ,
+                                                                                        if(wildmatch("Tag Names" ,'*New user request*'),'New user request' ,
+                                                                                        if(wildmatch("Tag Names" ,'*POD*'),'POD',
+                                                                                   if(wildmatch("Tag Names" ,'*Other*'),'Other' , 'N/A')))))))))))))))))))))))) as live_agent_requirement_type
+            
+
+FROM [lib://Geo_AMS/Automation/BI/LLP/Live Agent/hid_full_tickets_ams.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq)
+where wildmatch("Tag Names" ,'*4 HID*')
+and not wildmatch("Tag Names" ,'*9Duplicated*','*Duplicated*')
+;
+
+
+
+[live_agent_apac]:
+concatenate(live_agent_temp)
+LOAD
+    "Código del paí­s" as live_agent_ticket,
+    Id as live_agent_id,
+    //"Channel Type" as live_agent_channel,
+    date("Create Date",'DD/MM/YYYY hh:mm:ss') as live_agent_creation_date,
+    "Change Date" as live_agent_change_date,
+    "Status Changed Date" as live_agent_status_chenaged_date,
+    date("Resolve Date",'DD/MM/YYYY hh:mm:ss') as live_agent_resolve_date,
+    "Fecha de vencimiento" as live_agent_due_date,
+    "Reopen Date" as live_agent_reopen_date,
+    //"Tag Ids" as live_agent_tag_ids,
+    "Tag Names" as live_agent_tag_name,
+    Asunto as live_agent_subject,
+    //"Vista previa" as live_agent_preview,
+    //"Mensajes entrantes" as live_agent_messange_input,
+    //"Correo saliente" as live_agent_messange_output,
+    Estado as live_agent_status,
+
+        if(Estado = 'C' or Estado = 'N' or Estado = 'A', 'Open',
+            if(Estado = 'R', 'Resolved',
+                if(Estado = 'W', 'Postponed'))) as live_agent_status_name,
+    "Agent Name" as live_agent_agent_name,
+    //"Agent Id" as live_agent_agent_id,
+    "Department Name" as live_agent_department_name,
+    //"Department Id" as live_agent_department_id,
+    "Level Id" as live_agent_level_id,
+    //"User Id" as live_agent_user_id,
+    Nombre as live_agent_name,
+    Apellidos as live_agent_last_name,
+    //"System Name" as live_agent_system_name,
+    //"Contact Id" as live_agent_contact_id,
+    //"Parent Id" as live_agent_parent_id,
+    Emails as live_agent_emails,
+    //"Group Ids" as live_agent_group_id,
+    "Group Names" as live_agent_group_name,
+    //Nota as live_agent_notes,
+    //"Role Id" as live_agent_role_id,
+    if(wildmatch("Tag Names" ,'*9Duplicated*'),'Duplicated','Correct') as live_agent_duplicated_flag,
+
+
+    if(wildmatch("Tag Names" ,'*Routine*'),'Routine',
+        if(wildmatch("Tag Names" ,'*Urgent*'),'Urgent',
+            if(wildmatch("Tag Names" ,'*Vital*'),'Vital', 'No SL' ))) as live_agent_sl,
+
+    if(wildmatch("Tag Names" ,'*UPS*'),'UPS',
+        if(wildmatch("Tag Names" ,'*Kuehne*'),'KN',
+            if(wildmatch("Tag Names" ,'*U-Freight*'),'U-Freight','N/A'))) as live_agent_carrier,
+
+    if(wildmatch("Tag Names" ,'*Current Status*'),'Current Status',
+        if(wildmatch("Tag Names" ,'*Special tracking*'),'Special tracking',
+            if(wildmatch("Tag Names" ,'*Reason for delay*'),'Reason for delay',
+                if(wildmatch("Tag Names" ,'*Downgrade / Upgrade *'),'Downgrade / Upgrade ',
+                    if(wildmatch("Tag Names" ,'*Downgrade approval*'),'Downgrade approval',
+                        if(wildmatch("Tag Names" ,'*Documentation*'),'Documentation',
+                            if(wildmatch("Tag Names" ,'*Incident Investigation*'),'Incident Investigation',
+                                if(wildmatch("Tag Names" ,'*HID Escalation*'),'HID Escalation',
+                                    if(wildmatch("Tag Names" ,'*Transportation Quote*'),'Transportation Quote',
+                                        if(wildmatch("Tag Names" ,'*Vendor escalation*'),'Vendor escalation',
+                                            if(wildmatch("Tag Names" ,'*Vendor contact*'),'Vendor contact',
+                                                if(wildmatch("Tag Names" ,'*Shipping instruction*'),'Shipping instructions',
+                                                    if(wildmatch("Tag Names" ,'*eOrder discrepancy*'),'eOrder discrepancy',
+                                                        if(wildmatch("Tag Names" ,'*Manual Pick up request*'),'Manual Pick up request',
+                                                            if(wildmatch("Tag Names" ,'*SO discrepancy*'),'SO discrepancy',
+                                                                if(wildmatch("Tag Names" ,'*LSP escalation*'),'LSP escalation',
+                                                                    if(wildmatch("Tag Names" ,'*IT support*'),'IT support',
+                                                                        if(wildmatch("Tag Names" ,'*Attempted Pick Up*'),'Attempted Pick Up',
+                                                                            if(wildmatch("Tag Names" ,'*Claim*'),'Claim',
+                                                                                if(wildmatch("Tag Names" ,'*Manual booking request*'),'Manual booking request' ,
+                                                                                    if(wildmatch("Tag Names" ,'*Upgrade approval*'),'Upgrade approval' ,
+                                                                                        if(wildmatch("Tag Names" ,'*New user request*'),'New user request' ,
+                                                                                        if(wildmatch("Tag Names" ,'*POD*'),'POD',
+                                                                                   if(wildmatch("Tag Names" ,'*Other*'),'Other' , 'N/A')))))))))))))))))))))))) as live_agent_requirement_type
+            
+
+FROM [lib://Geo_AMS/Automation/BI/LLP/Live Agent/hid_full_tickets_apac.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq)
+where wildmatch("Tag Names" ,'*4 HID*')
+and not wildmatch("Tag Names" ,'*9Duplicated*','*Duplicated*')
+;
+
+
+[live_agent_emea]:
+concatenate(live_agent_temp)
+LOAD
+    "Código del paí­s" as live_agent_ticket,
+    Id as live_agent_id,
+    //"Channel Type" as live_agent_channel,
+    date("Create Date",'DD/MM/YYYY hh:mm:ss') as live_agent_creation_date,
+    "Change Date" as live_agent_change_date,
+    "Status Changed Date" as live_agent_status_chenaged_date,
+    date("Resolve Date",'DD/MM/YYYY hh:mm:ss') as live_agent_resolve_date,
+    "Fecha de vencimiento" as live_agent_due_date,
+    "Reopen Date" as live_agent_reopen_date,
+    //"Tag Ids" as live_agent_tag_ids,
+    "Tag Names" as live_agent_tag_name,
+    Asunto as live_agent_subject,
+    //"Vista previa" as live_agent_preview,
+    //"Mensajes entrantes" as live_agent_messange_input,
+    //"Correo saliente" as live_agent_messange_output,
+    Estado as live_agent_status,
+
+        if(Estado = 'C' or Estado = 'N' or Estado = 'A', 'Open',
+            if(Estado = 'R', 'Resolved',
+                if(Estado = 'W', 'Postponed'))) as live_agent_status_name,
+    "Agent Name" as live_agent_agent_name,
+    //"Agent Id" as live_agent_agent_id,
+    "Department Name" as live_agent_department_name,
+    //"Department Id" as live_agent_department_id,
+    "Level Id" as live_agent_level_id,
+    //"User Id" as live_agent_user_id,
+    Nombre as live_agent_name,
+    Apellidos as live_agent_last_name,
+    //"System Name" as live_agent_system_name,
+    //"Contact Id" as live_agent_contact_id,
+    //"Parent Id" as live_agent_parent_id,
+    Emails as live_agent_emails,
+    //"Group Ids" as live_agent_group_id,
+    "Group Names" as live_agent_group_name,
+    //Nota as live_agent_notes,
+    //"Role Id" as live_agent_role_id,
+    if(wildmatch("Tag Names" ,'*9Duplicated*'),'Duplicated','Correct') as live_agent_duplicated_flag,
+
+
+    if(wildmatch("Tag Names" ,'*Routine*'),'Routine',
+        if(wildmatch("Tag Names" ,'*Urgent*'),'Urgent',
+            if(wildmatch("Tag Names" ,'*Vital*'),'Vital', 'No SL' ))) as live_agent_sl,
+
+    if(wildmatch("Tag Names" ,'*UPS*'),'UPS',
+        if(wildmatch("Tag Names" ,'*Kuehne*'),'KN',
+            if(wildmatch("Tag Names" ,'*U-Freight*'),'U-Freight','N/A'))) as live_agent_carrier,
+
+    if(wildmatch("Tag Names" ,'*Current Status*'),'Current Status',
+        if(wildmatch("Tag Names" ,'*Special tracking*'),'Special tracking',
+            if(wildmatch("Tag Names" ,'*Reason for delay*'),'Reason for delay',
+                if(wildmatch("Tag Names" ,'*Downgrade / Upgrade *'),'Downgrade / Upgrade ',
+                    if(wildmatch("Tag Names" ,'*Downgrade approval*'),'Downgrade approval',
+                        if(wildmatch("Tag Names" ,'*Documentation*'),'Documentation',
+                            if(wildmatch("Tag Names" ,'*Incident Investigation*'),'Incident Investigation',
+                                if(wildmatch("Tag Names" ,'*HID Escalation*'),'HID Escalation',
+                                    if(wildmatch("Tag Names" ,'*Transportation Quote*'),'Transportation Quote',
+                                        if(wildmatch("Tag Names" ,'*Vendor escalation*'),'Vendor escalation',
+                                            if(wildmatch("Tag Names" ,'*Vendor contact*'),'Vendor contact',
+                                                if(wildmatch("Tag Names" ,'*Shipping instruction*'),'Shipping instructions',
+                                                    if(wildmatch("Tag Names" ,'*eOrder discrepancy*'),'eOrder discrepancy',
+                                                        if(wildmatch("Tag Names" ,'*Manual Pick up request*'),'Manual Pick up request',
+                                                            if(wildmatch("Tag Names" ,'*SO discrepancy*'),'SO discrepancy',
+                                                                if(wildmatch("Tag Names" ,'*LSP escalation*'),'LSP escalation',
+                                                                    if(wildmatch("Tag Names" ,'*IT support*'),'IT support',
+                                                                        if(wildmatch("Tag Names" ,'*Attempted Pick Up*'),'Attempted Pick Up',
+                                                                            if(wildmatch("Tag Names" ,'*Claim*'),'Claim',
+                                                                                if(wildmatch("Tag Names" ,'*Manual booking request*'),'Manual booking request' ,
+                                                                                    if(wildmatch("Tag Names" ,'*Upgrade approval*'),'Upgrade approval' ,
+                                                                                        if(wildmatch("Tag Names" ,'*New user request*'),'New user request' ,
+                                                                                        if(wildmatch("Tag Names" ,'*POD*'),'POD',
+                                                                                   if(wildmatch("Tag Names" ,'*Other*'),'Other' , 'N/A')))))))))))))))))))))))) as live_agent_requirement_type
+            
+
+FROM [lib://Geo_AMS/Automation/BI/LLP/Live Agent/hid_full_tickets_emea.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq)
+where wildmatch("Tag Names" ,'*4 HID*')
+and not wildmatch("Tag Names" ,'*9Duplicated*','*Duplicated*')
+;
+
+
+
+
+
+
+
+
+
+left join(live_agent_temp)
+LOAD
+    live_agent_ticket,
+    //date(answer_date,'DD/MM/YYYY') as live_agent_first_answer_date_2,
+    date(answer_date,'DD/MM/YYYY hh:mm:ss') as live_agent_first_answer_date
+
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/HID_AnswerDate.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+live_agent: 
+noconcatenate
+Load distinct
+    *,
+    year(live_agent_creation_date) & '-' & num(month(live_agent_creation_date),'00') as live_agent_creation_yearmonth,
+    year(live_agent_creation_date) & '-' & num(week(live_agent_creation_date),'00') as live_agent_creation_yearweek,
+
+    if(len(live_agent_first_answer_date) = 0,
+    if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Current Status' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+        if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Reason for delay' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+            if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Downgrade / Upgrade ' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',                
+                    if(('$(vToday)' - live_agent_creation_date) > 1 and live_agent_requirement_type = 'Documentation' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                        if(('$(vToday)' - live_agent_creation_date) > 1 and live_agent_requirement_type = 'Incident Investigation' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                            if(('$(vToday)' - live_agent_creation_date) > 1 and live_agent_requirement_type = 'HID Escalation' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                if(('$(vToday)' - live_agent_creation_date) > 2 and live_agent_requirement_type = 'Transportation Quote' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                    if(('$(vToday)' - live_agent_creation_date) > 1 and live_agent_requirement_type = 'Vendor escalation' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                        if(('$(vToday)' - live_agent_creation_date) > 1 and live_agent_requirement_type = 'Vendor contact' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                            if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Shipping instructions' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'eOrder discrepancy' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                    if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Manual Pick up request' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                        if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Manual booking request' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                             if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'SO discrepancy' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'LSP escalation' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                    if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Downgrade approval' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                    if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'POD' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                    if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Attempted Pick Up' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                        if(('$(vToday)' - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Special tracking' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                        if(('$(vToday)' - live_agent_creation_date) > 1 and live_agent_requirement_type = 'Claim' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                        if(('$(vToday)' - live_agent_creation_date) > 2 and live_agent_requirement_type = 'IT support' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                        if(('$(vToday)' - live_agent_creation_date) > 2 and live_agent_requirement_type = 'New user request' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late','On Time'
+                                                                )))))))))))))))))))))),
+
+    if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Current Status' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+        if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Reason for delay' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+            if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Downgrade / Upgrade ' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',                
+                    if((live_agent_first_answer_date - live_agent_creation_date) > 1 and live_agent_requirement_type = 'Documentation' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                        if((live_agent_first_answer_date - live_agent_creation_date) > 1 and live_agent_requirement_type = 'Incident Investigation' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                            if((live_agent_first_answer_date - live_agent_creation_date) > 1 and live_agent_requirement_type = 'HID Escalation' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                if((live_agent_first_answer_date - live_agent_creation_date) > 2 and live_agent_requirement_type = 'Transportation Quote' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                    if((live_agent_first_answer_date - live_agent_creation_date) > 1 and live_agent_requirement_type = 'Vendor escalation' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                        if((live_agent_first_answer_date - live_agent_creation_date) > 1 and live_agent_requirement_type = 'Vendor contact' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                            if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Shipping instructions' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'eOrder discrepancy' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                    if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Manual Pick up request' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                        if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Manual booking request' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                             if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'SO discrepancy' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'LSP escalation' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                    if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Downgrade approval' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                    if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'POD' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                    if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Attempted Pick Up' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                    if((live_agent_first_answer_date - live_agent_creation_date) > .25 and live_agent_requirement_type = 'Special tracking' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                    if((live_agent_first_answer_date - live_agent_creation_date) > 1 and live_agent_requirement_type = 'Claim' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                    if((live_agent_first_answer_date - live_agent_creation_date) > 2 and live_agent_requirement_type = 'IT support' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late',
+                                                                    if((live_agent_first_answer_date - live_agent_creation_date) > 2 and live_agent_requirement_type = 'New user request' and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),'Late','On Time'
+                                                                )))))))))))))))))))))))
+
+
+                            as live_agent_on_time_response,
+
+    if(not isnull(live_agent_first_answer_date) and not wildmatch(live_agent_tag_name,'*Weekend*','*Not for metrics*','*Afer bussines*','*No ACK*'),live_agent_first_answer_date - live_agent_creation_date) as live_agent_response_time
+                
+resident live_agent_temp;
+
+drop table live_agent_temp;
+
+no_answer_hid:
+noconcatenate
+load 
+    live_agent_ticket
+
+resident live_agent
+where len(trim(live_agent_first_answer_date)) = 0;
+
+store no_answer_hid into [lib://Geo_AMS/Automation\file_operations\from_qlik/no_answer_hid.csv](txt);
+
+drop table no_answer_hid;
+
+
+//automatic and manual ---------------------------------------------------
+
+[cp_edi_temp]:
+left keep(sale_basic)
+load distinct
+    buy_service_id
+
+resident buy_basic
+where buy_service_nature = 'DELIVERY';
+
+left join(cp_edi_temp)
+load distinct 
+    buy_service_id,
+    buy_LastEvent_update_user_id
+resident buy_last_be
+where match(buy_LastEvent_code,'6','13','A31','ETD','ETA','A40','D05','A12','DLE','43','A21');
+
+left join(cp_edi_temp)
+Load  distinct
+    buy_service_id,
+    count(distinct buy_LastEvent_update_user_id) as user_count
+resident cp_edi_temp
+group by buy_service_id;
+
+
+cp_edi:
+noconcatenate
+load distinct
+    buy_service_id,
+    if(user_count = 1 and buy_LastEvent_update_user_id = 'all-admin','Automatic','Manual' ) as cp_edi
+
+resident cp_edi_temp;
+
+drop table cp_edi_temp;
+
+//-------------------------------------------------------------------------------------------------------------
+claims:
+left keep(sale_basic)
+LOAD
+
+    "Claim Number" as claim_number,
+    "Claim Status" as claim_status,
+    "Claim Type" as claim_type,
+    "Incident Type" as claim_incident_type,
+    "Incident Location" as claim_location,
+    "Incident Root Cause" as claim_root_cause,
+    "Incident Date" as claim_incident_date,
+    "Date Reported" as claim_date_reported,
+    "Date Created" as claim_date_created,
+    "Date Claim Filed" as claim_date_filed,
+    "Date Recovered" as claim_date_recovered,
+    "Date Closed" as claim_date_closed,
+    "Value of Loss" as claim_value_of_loss,
+    "Claim Amount" as claim_amount,
+    "Claim Recovery" as claim_recovery,
+    "Closing Reason" as claim_closing_reason,
+    "Insurance Coverage" as claim_insurance_coverage,
+    "Insurance Deductible" as claim_insurace_deductible,
+    "Insurance Company" as claim_insurance_company,
+    "Insurance Claim Number" as claim_insurance_number,
+    "Reporter Full Name" as claim_reporter,
+    "Reporter Contact" as claim_reporter_contact,
+    "Claim Owner" as claim_owner,
+    "Claim Cost" as claim_cost,
+    "Shipment Number" as sale_service_id,
+    if( "Claim Status" = 'Open', 
+        if("Date Reported" - '$(vToday)' < 91, '1. <91 Days',
+            if("Date Reported" - '$(vToday)' < 179, '2. <179 Days','3. +180 Days')),
+        
+        if("Date Reported" - "Date Closed" < 91, '1. <91 Days',
+            if("Date Reported" - "Date Closed" < 179, '2. <179 Days','3. +180 Days'))) as claim_bracket
+        
+
+                
+        
+    
+FROM [lib://Geo_AMS/Automation/BI/HID/Claims/HID - CLAIMS DUMMY DATA.xlsx]
+(ooxml, embedded labels, table is [Mandatory Claim Fields]);
+
+exit script;

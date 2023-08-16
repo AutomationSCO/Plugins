@@ -1,0 +1,70 @@
+// 20. Incorrect Delivery Term ---------------------------------------------------------------------------------------------------------------------------------
+[cp_incorrect_delivery_term_temp]:
+left keep(sale_basic)
+Load  distinct
+    sale_service_id,    
+    sale_start_country,
+    sale_end_country,
+    sale_caribbean_flag
+
+
+
+resident sale_basic
+where GEODIS_ops_Team = 'Inter Team'
+and sale_ams_billing = 'AMS Bill'
+and not match(sale_service_short_name,'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP')
+and not match(net_flag,1)
+
+
+
+or
+
+GEODIS_ops_Team = 'Inter Team'
+and sale_start_geo = 'AMS'
+and not match(sale_service_short_name,'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP')
+and not match(net_flag,1)
+and not match(sale_creation_year,'2021')
+
+;
+
+left join(cp_incorrect_delivery_term_temp)
+load distinct
+
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(cp_incorrect_delivery_term_temp)
+load distinct
+
+    buy_service_id,
+    buy_requested_service
+
+resident buy_service_specific_data;
+
+left join(cp_incorrect_delivery_term_temp)
+load distinct
+
+    sale_service_id,
+    sale_requested_service
+
+resident sale_service_specific_data;
+
+
+[cp_incorrect_delivery_term]:
+LOAD Distinct
+    sale_service_id,
+    if(match(sale_caribbean_flag & sale_requested_service & buy_requested_service,'YesSOS DTPSOS DTP','YesSOS E2ESOS E2E','YesSOS DTDSOS DTD','YesOTHER OTHERSOS DTP'),'Incorrect',
+    if(match(sale_end_country & sale_requested_service & buy_requested_service,'TRSOS DTPSOS DTP','TRSOS E2ESOS E2E','TRSOS DTDSOS DTD','TROTHER OTHERSOS DTP'),'Incorrect',
+    if(isnull(sale_requested_service) or sale_requested_service = 'No match','Incorrect',
+        if(isnull(buy_requested_service) or buy_requested_service = 'No match','Incorrect',
+            if(match(sale_start_country & sale_end_country & sale_requested_service & buy_requested_service,'CNMXOTHER E2EOTHER DTD','MXILSOS DTDOTHER DTP','HKMXBSA DTDSOS PTD','HKMXBSA DTDBSA DTD','CNBROTHER DTPOTHER DTD'),'Correct',
+                if(match(sale_end_country & sale_requested_service & buy_requested_service,'BROTHER DTPOTHER DTD','BROTHER PTPOTHER PTD'),'Correct',
+            if(sale_requested_service <> buy_requested_service,'Incorrect','Correct'
+            ))))))) as cp_incorrect_delivery_term
+
+resident cp_incorrect_delivery_term_temp
+where len(trim(buy_service_id)) > 2;
+
+Drop Table  cp_incorrect_delivery_term_temp;

@@ -1,0 +1,10 @@
+buy_activity_report:
+left keep(buy_basic)
+LOAD
+    buy_service_system_id as buy_service_id,
+	buy_service_activity_report_id as buy_service_activity_report,
+    buy_service_activity_report_status,
+    buy_service_activity_report_validation_date
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_Service.qvd]
+(qvd);

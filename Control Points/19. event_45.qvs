@@ -1,0 +1,35 @@
+//48. Incorrect Event 45---------------------------------------------------------------------------------------------------------------------------------------
+
+event_45_temp:
+noconcatenate
+load distinct
+    buy_service_id
+
+resident buy_basic;
+
+left join(event_45_temp)
+load distinct
+    buy_service_id,
+    buy_LastEvent_actual_date as buy_event_6_actual_date
+
+resident buy_last_be
+where buy_LastEvent_reason_code = 6;
+
+left join(event_45_temp)
+load distinct
+    buy_service_id,
+    precall_actual_date
+
+resident Precall;
+
+event_45:
+noconcatenate
+load distinct 
+    buy_service_id,
+    buy_event_6_actual_date,
+    if(date#(buy_event_6_actual_date) = date#(precall_actual_date),'Correct','Incorrect') as cp_event_45
+
+resident event_45_temp
+where len(trim(buy_event_6_actual_date)) > 1;
+
+drop table event_45_temp;

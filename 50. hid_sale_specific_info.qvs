@@ -1,0 +1,27 @@
+HID_specific_info:
+left keep(sale_basic)
+LOAD
+    //sale_service_systemid,
+    sale_service_id,
+    //sale_service_HID_organization_id,
+    //sale_service_HID_reference_1,
+    //sale_service_HID_reference_2,
+    //sale_service_HID_reference_3,
+    //sale_service_HID_reference_4,
+    //sale_service_HID_reference_5,
+    //sale_service_HID_reference_6,
+    //sale_service_HID_reference_7,
+    //sale_service_HID_reference_8,
+    //sale_service_HID_reference_9,
+    //sale_service_HID_reference_10,
+    //sale_service_HID_remarks,
+    sale_service_HID_remarks2,
+    //sale_service_HID_app_source,
+    //sale_service_HID_record_date,
+    sale_service_HID_ModeOfTransport,
+    sale_service_HID_clearanceType,
+    sale_service_HID_purchaseOrder,
+    sale_service_HID_invoiceReference,
+    sale_service_HID_Flow
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_HID.qvd]
+(qvd);

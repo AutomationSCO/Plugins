@@ -1,0 +1,43 @@
+
+//43. cp Missing Loading Number----------------------------------------------------------------------------------------------------aqui
+[cp_missing_loading_number_temp]:
+LEFT Keep ([sale_basic])
+LOAD Distinct
+
+    sale_service_id
+
+resident sale_basic
+where match(sale_contractor_party,'JBI_US','APEX_US','LOLL_US')
+and sale_creation_year >= '2021'
+and len(trim(sale_loading_number )) = 0;
+
+left join(cp_missing_loading_number_temp)
+LOAD
+    CSO as sale_service_id,
+    'Yes' as CP_43_Net
+    
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'Loading Number';
+
+left join(cp_missing_loading_number_temp)
+load distinct
+    sale_service_id,
+    sale_event_reason_code
+
+resident sale_first_be
+where sale_event_reason_code =  'Z12';
+
+
+[cp_missing_loading_number]:
+noconcatenate
+LOAD Distinct
+
+    sale_service_id,
+    'Incorrect' as cp_missing_loading_number
+
+resident cp_missing_loading_number_temp
+where len(trim(sale_event_reason_code)) < 2
+and len(trim(CP_43_Net)) = 0;
+
+drop table cp_missing_loading_number_temp;

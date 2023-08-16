@@ -1,0 +1,58 @@
+﻿$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Charter/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+
+
+//drop table Precall;
+//First Leg-----------------------------------------------------------------------------
+
+charter_sale_basic:
+Noconcatenate
+LOAD distinct
+    *
+    //if(isnull(cso_finance_cw),cso_weight_kg,cso_finance_cw) as cso_international_weight,
+    //if(isnull(cso_be_d_flag),0,cso_be_d_flag) as cso_be_d_flag1
+
+RESIDENT [sale_basic]
+WHERE Match(sale_start_country,'HU')
+and match(sale_end_country,'US') //NY TX
+and (Len(Trim(sale_service_id)) >= 3)
+;
+    
+Drop Table  [sale_basic];
+
+[Charter_sale_buy]:
+left Keep ([charter_sale_basic])
+ LOAD
+    *
+
+resident [sale-buy]
+;
+
+Drop table [sale-buy];
+
+
+[Charter_buy_basic]:
+left Keep ([Charter_sale_buy])
+ LOAD
+
+  *
+
+resident [buy_basic];  
+
+Drop table [buy_basic];
+
+rename table charter_sale_basic to sale_basic;
+rename table [Charter_sale_buy] to [sale-buy];
+rename table [Charter_buy_basic] to buy_basic;
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/4. HU_Items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/16. Buy_LastBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/14. DIMC.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/8. Precall.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/23. full_FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/54. buy_specific_info_ibm.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/59. Booking Details.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/60. DB Booking Details.qvs]);

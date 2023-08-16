@@ -1,0 +1,44 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/ComputaCenter/0.1 Main_computacenter.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+
+Noconcatenate
+[comp_sale_basic]:
+LOAD
+    *
+    
+    
+RESIDENT [sale_basic]
+    WHERE Match(sale_contractor_party,'COMPUTACENTER','COMPCTR_US')
+;
+
+Drop Table  [sale_basic];
+
+[comp_sale-buy]:
+
+left Keep ([comp_sale_basic])
+ LOAD
+    sale_service_id,
+    buy_service_id
+    
+
+resident [sale-buy];
+
+
+Drop table [sale-buy];
+
+
+
+
+[comp_buy_basic]:
+
+left Keep ([comp_sale-buy])
+ LOAD
+  *
+ resident [buy_basic];   
+
+Drop table [buy_basic];
+
+rename table comp_sale_basic to sale_basic;
+rename table comp_buy_basic to buy_basic;
+rename table [comp_sale-buy] to [sale-buy];

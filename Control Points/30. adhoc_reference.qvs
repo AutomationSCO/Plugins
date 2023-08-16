@@ -1,0 +1,30 @@
+adhoc_reference_temp:
+LEFT Keep ([sale_basic])
+LOAD Distinct
+
+    sale_service_id,
+    sale_creation_date,
+    sale_start_country,
+    sale_end_country
+
+resident sale_basic
+where not match(net_flag,1)
+and not match(sale_service_short_name,'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP')
+and sale_ams_billing = 'AMS Bill'
+;
+
+left join(adhoc_reference_temp)
+load distinct
+    sale_service_id,
+    sale_adhoc_reference
+resident sale_service_specific_data;
+
+adhoc_reference:
+noconcatenate
+Load
+    sale_service_id,
+    'Incorrect' as cp_adhoc_reference
+resident adhoc_reference_temp
+where len(trim(sale_adhoc_reference)) = 0;
+
+drop table adhoc_reference_temp;

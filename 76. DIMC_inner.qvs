@@ -1,0 +1,81 @@
+NoConcatenate
+DIMC_NewReport:
+LOAD
+    DIMC as ID_inc,
+    //"SSO",
+    Status as ID_status,
+    Customer as ID_cust,
+    Carrier as ID_carrier,
+    //Tier,
+    Origin as ID_origen,
+    Destination as ID_destiny,
+    //MoT,
+    "Incident Type" as ID_incident,
+    Pro# as pro_number,
+    RCCA as ID_rca,
+    //Claim as ID_claim,
+    "Claim Number" as ID_claim,
+    //"Root Cause",
+    //"Action Plan",
+    Comments as comment,
+    //Stars,
+    "Created By" as ID_user,
+    //DATE#("Creation Date",'DD/MM/YYYY') as creation_date,
+    SubField("Creation Date",'-',3) &'/'& SubField("Creation Date",'-',2) &'/'&SubField("Creation Date",'-',1) as creation_date,
+    //"Requested Date",
+    //DATE#("Shipped Date", 'DD/MM/YYYY') as shipped_date,
+    SubField("Shipped Date",'-',3) &'/'& SubField("Shipped Date",'-',2) &'/'&SubField("Shipped Date",'-',1)as shipped_date,
+    //DATE#("Delivery Date", 'DD/MM/YYYY') as delivery_date,
+    SubField("Delivery Date",'-',3) &'/'& SubField("Delivery Date",'-',2) &'/'&SubField("Delivery Date",'-',1)as delivery_date,
+    //DATE#("Closed Date",'DD/MM/YYYY') as closed_date
+    SubField("Closed Date",'-',3) &'/'& SubField("Closed Date",'-',2) &'/'&SubField("Closed Date",'-',1)as closed_date
+FROM [lib://Geo_AMS/Edgar/Incidents_27_6_2023_page_1_.xlsx]
+(ooxml, embedded labels, table is [page 1]) where YEAR("Creation Date") = '2023';
+
+/*LOAD
+    if(isnull(DIMC),'-',DIMC) as DIMC,
+    Status as dimc_status,
+    //Customer,
+    //Carrier as dimc_carrier,
+    //Tier,
+    //Origin,
+    //Destination,
+    //MoT,
+    "Incident Type" as dimc_incident_type, 
+    Pro# as dim_pro,
+    RCCA as dimc_rcca,
+    //Claim,
+    "Root Cause" as dimc_root_cause,
+    "Action Plan" as dimc_action_plan,
+    //Comments,
+    //Stars,
+    "Created By" as dimc_created_by,
+    date("Creation Date") as dimc_creation_date,
+    week("Creation Date",0,1) - 1  as dimc_creation_week,
+    year("Creation Date") & '-' & num((week("Creation Date",0,1) - 1),'00') as dimc_creationyearWeek,
+    //"Shipped Date",
+    //"Delivery Date",
+    "Closed Date" as dimc_closed_date
+    
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Incidents.xlsx]
+(ooxml, embedded labels, table is [page 1]);
+*/
+
+LOAD
+    ID_inc,
+    ID_status,
+    Customer,
+    ID_carrier,
+    ID_origen,
+    ID_destiny,
+    ID_incident,
+    pro_number,
+    ID_rca,
+    "comment",
+    ID_user,
+    creation_date,
+    shipped_date,
+    delivery_date,
+    closed_date
+FROM [lib://Geo_AMS/LogisticsAnalyst/DIMC/DIMC.xlsx]
+(ooxml, embedded labels, table is [page 1]);

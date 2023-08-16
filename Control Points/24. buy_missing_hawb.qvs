@@ -1,0 +1,68 @@
+//3. cp_Missing AWB----------------------------------------------------------------------------------------------------
+[buy_missing_hawb_temp]:
+LEFT Keep ([sale_basic])
+LOAD Distinct
+
+    sale_service_id,
+    sale_app_source
+
+
+resident sale_basic
+where not match(sale_service_short_name,'BROOKAY_US','BROOKAY_US/TR','BROOKLYN KAYAK U')
+and not match(sale_service_short_name,'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP')
+and sale_creation_year >= '2021'
+and sale_actual_start_date < '$(vToday)'
+and not match(sale_service_short_name,'IBM_MD_NB')
+//and match(sale_loading_geo,'AMS')
+and not match(net_flag,1)
+and not match(sale_service_execution_followup,'APP','NAP','SHIPMENT CANCELED')
+and sale_app_source = 'Zenith'
+
+or sale_app_source = 'MPO'
+and not match(Client,'BP')
+and not match(sale_service_execution_followup,'SHIPMENT CANCELED')
+
+;
+
+left join(buy_missing_hawb_temp)
+load distinct
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(buy_missing_hawb_temp)
+load distinct 
+    buy_service_id,
+    buy_hawb
+
+resident buy_service_specific_data; 
+
+left join(buy_missing_hawb_temp)
+LOAD Distinct
+
+    buy_service_id,
+    buy_service_nature
+
+
+resident buy_basic
+;
+
+
+
+[buy_missing_hawb]:
+noconcatenate
+Load distinct
+    buy_service_id,
+    if(len(trim(buy_hawb)) < 2,'Incorrect','Correct') as cp_missing_buy_hawb
+
+resident buy_missing_hawb_temp
+
+where len(trim(buy_service_id)) > 2
+and match(buy_service_nature,'CROSSDOCK','DELIVERY','LINEHAUL')
+
+or 
+len(trim(buy_service_id)) > 2
+and sale_app_source = 'Zenith'
+;
+drop table buy_missing_hawb_temp;

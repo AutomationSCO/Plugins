@@ -1,0 +1,77 @@
+
+buy_financial_specific_info_temp_temp:
+noconcatenate
+load distinct
+    buy_service_id,
+    Carrier,
+    buy_executor_short_name,
+    if('$(vToday)' - buy_actual_end_date <= 10,'On Time',
+        if('$(vToday)' - buy_actual_end_date <= 15,'On Risk','Late')) as buy_finance_aging_temp,
+
+    '$(vToday)' - buy_actual_end_date as buy_validation_days_temp,
+    
+    buy_actual_end_date
+
+resident buy_basic;
+
+left join(buy_financial_specific_info_temp_temp)
+load distinct 
+    buy_service_id,
+    buy_invoice_accountant_date
+    
+resident ST;
+
+buy_financial_specific_info_temp:
+noconcatenate
+load distinct
+    buy_service_id,
+    /*if(isnull(buy_invoice_accountant_date),buy_finance_aging_temp,
+        if(buy_invoice_accountant_date - buy_actual_end_date < 15,'On Time','Late')) as buy_finance_on_time_KPI,*/
+
+    /*if(isnull(buy_invoice_accountant_date),buy_validation_days_temp,
+    if(match(Carrier,'3MD','ALMACENADO','ARMSTP_US','BELMONT','BELSCRAPMX',
+        'CPSJ_AR_MD','FEDEXMXNCS','GEODIS FF','GFFOCEANAR','GONTOR_US',
+        'GONTORMDMX','IBM ALLEN','ITSA_AR_MD',
+    'NIPPON','SCYRZ_ARMD','SIVI','SWISSPRTMX','TAME_MX','TRANSPADEX','UPS'),networkdays(monthend(buy_actual_end_date),buy_invoice_accountant_date),
+        buy_invoice_accountant_date - buy_actual_end_date)) as buy_validation_days*/
+
+    if(Match(buy_executor_short_name,'CLOG_MX_MD',
+    'TAME_MX','SIVI_MX','TRANSPADEX','TRANSCAR','GEOWILUSMD','NIPPONMDUS','NIPPONMDCA','GEOWILCAMD','DSV_MX',
+    'GEOWIL_AR','GEOWIL_CL','GEOWIL_CO','GEOWIL_EC','GEOWIL_PE','GEOWILARMD','GEOWILBRMD','GEOWILCOMD',
+    'GEOWILMXMD','GEOWILZA','GFFOCEANAR','GFFOCEANMX','HELLM_MX','NIPPONMDMX','HURONREAUS','GONTOR_US',
+    'WEGO_US','ARMSTP_US','LIB_US_BK','AGWTC_MXMD','BELMONT_MX','BELSCRAPMX','CPSJ_AR_MD','ECOTECNAAR',
+    'FEDEXMXNCS','GONTORMDMX','INTCASH-MX','ITSA_AR_MD','SCYRZ_ARMD','SWISSPRTMX','XTRPK_MXMD','UPS_CA_MD','AXAINSU_MX')
+        and (len(buy_invoice_accountant_date) < 1),
+                                (Floor(Today() - Date((monthend(buy_actual_end_date))+10))),
+            if(Match(buy_executor_short_name,'CLOG_MX_MD',
+                'TAME_MX','SIVI_MX','TRANSPADEX','TRANSCAR','GEOWILUSMD','NIPPONMDUS','NIPPONMDCA','GEOWILCAMD','DSV_MX',
+                'GEOWIL_AR','GEOWIL_CL','GEOWIL_CO','GEOWIL_EC','GEOWIL_PE','GEOWILARMD','GEOWILBRMD','GEOWILCOMD',
+                'GEOWILMXMD','GEOWILZA','GFFOCEANAR','GFFOCEANMX','HELLM_MX','NIPPONMDMX','HURONREAUS','GONTOR_US',
+                'WEGO_US','ARMSTP_US','LIB_US_BK','AGWTC_MXMD','BELMONT_MX','BELSCRAPMX','CPSJ_AR_MD','ECOTECNAAR',
+                'FEDEXMXNCS','GONTORMDMX','INTCASH-MX','ITSA_AR_MD','SCYRZ_ARMD','SWISSPRTMX','XTRPK_MXMD','UPS_CA_MD','AXAINSU_MX')
+                    and (len(buy_invoice_accountant_date) > 1),
+                                            Floor(buy_invoice_accountant_date - Date((monthend(buy_actual_end_date))+10)),
+                                                if(len(buy_invoice_accountant_date) < 1,
+                                                                        Floor(Today() - buy_actual_end_date),
+                                                                            if(len(buy_invoice_accountant_date) > 0,
+                                                                                buy_invoice_accountant_date - buy_actual_end_date)))) as buy_validation_days
+
+
+resident buy_financial_specific_info_temp_temp;
+
+drop table buy_financial_specific_info_temp_temp;
+
+buy_financial_specific_info:
+noconcatenate
+load distinct
+
+    *,
+    if(buy_validation_days < 15, '1. 1 - 15 Days',
+        if(buy_validation_days < 30, '2. 16 - 30 Days', '3. 30+ Days')) as buy_finance_aging,
+    //if(buy_invoice_accountant_date - buy_actual_end_date < 15,'On Time','Late') as buy_finance_on_time_KPI
+    if(buy_validation_days < 15,'On Time','Late') as buy_finance_on_time_KPI
+
+
+resident buy_financial_specific_info_temp;
+
+drop table buy_financial_specific_info_temp;

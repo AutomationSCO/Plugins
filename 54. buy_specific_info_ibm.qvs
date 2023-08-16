@@ -1,0 +1,24 @@
+
+buy_ibm_specific_info:
+left keep(buy_basic)
+LOAD
+     buy_service_id,
+//     IBM_buy_loading_zoning_id,
+     IBM_buy_loading_zoning,
+//     IBM_buy_unloading_zoning_id,
+     IBM_buy_unloading_zoning,
+//     buy_service_ibm_app_source,
+     
+//     IBM_buy_requested_service,
+//     IBM_buy_adhoc_reference,
+//     IBM_buy_chargeable_weight_kg,
+//     IBM_buy_requester_name,
+//     IBM_buy_flow_code,
+//     IBM_buy_code_flux,
+//     IBM_buy_MAWB,
+//     IBM_buy_HAWB
+	IBM_buy_service_order_scenario,
+     IBM_buy_EDI_Recipient_identification
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_Service_IBM.qvd]
+(qvd);
+

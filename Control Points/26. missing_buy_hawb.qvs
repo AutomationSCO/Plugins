@@ -1,0 +1,40 @@
+//3. cp_Missing AWB----------------------------------------------------------------------------------------------------
+[Control_Point_MissingAWB_temp]:
+LEFT Keep ([buy_basic])
+LOAD Distinct
+
+    buy_service_id,
+    buy_app_source
+
+
+resident buy_basic
+where 
+buy_app_source = 'Zenith'
+
+or 
+
+buy_app_source = 'MPO'
+and match(buy_service_execution_followup,'STARTED','FINISHED')
+and match(buy_service_nature,'CROSSDOCK','DELIVERY','LINEHAUL')
+
+;
+
+LEFT join([Control_Point_MissingAWB_temp])
+LOAD DISTINCT
+    buy_service_id,
+    buy_hawb
+
+resident buy_service_specific_data;
+
+
+[cp_hawb_buy]:
+noconcatenate
+Load distinct
+    buy_service_id,
+    'Incorrect' as cp_missing_buy_hawb
+
+resident [Control_Point_MissingAWB_temp]
+
+where len(trim(buy_hawb)) = 0
+;
+drop table Control_Point_MissingAWB_temp;

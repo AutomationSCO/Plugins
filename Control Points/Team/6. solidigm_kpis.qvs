@@ -1,0 +1,46 @@
+
+solid_kpis_temp:
+NoConcatenate
+load
+	sale_service_id,
+    sale_actual_start_date,
+    sale_actual_end_date,
+    hu_reference
+    
+resident sale_basic
+where match(sale_service_execution_followup,'FINISHED');
+
+left join(solid_kpis_temp)
+Load
+	hu_reference,
+    eorder_order_to_shipment_key
+Resident Eorder_Shipment;
+
+left join(solid_kpis_temp)
+Load
+	eorder_order_systemid,
+    eorder_order_to_shipment_key
+Resident Eorder_Order;
+
+
+
+left join(solid_kpis_temp)
+Load
+	eorder_order_systemid,
+    solidigm_eorder_order_SOLIDIGM_CO_ExtraOrderData_CommitDockDate,
+    solidigm_eorder_order_SOLIDIGM_CO_ExtraOrderData_CommittedGoodIssueDate, 
+    1 as flag
+resident solidigm_specific_ifo;
+
+
+solid_kpis:
+NoConcatenate
+load
+eorder_order_systemid,
+if(sale_actual_start_date <=  solidigm_eorder_order_SOLIDIGM_CO_ExtraOrderData_CommittedGoodIssueDate,'Correct','Incorrect') as solidigm_ontime_CGI,
+if(sale_actual_end_date <=  solidigm_eorder_order_SOLIDIGM_CO_ExtraOrderData_CommitDockDate,'Correct','Incorrect') as solidigm_ontime_CDD
+
+resident solid_kpis_temp
+where flag = 1 ;
+
+drop table solid_kpis_temp;

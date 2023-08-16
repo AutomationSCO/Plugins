@@ -1,0 +1,17 @@
+duplicate_order_temp:
+NoConcatenate
+load 
+	hu_reference,
+    count(distinct sale_service_id) as cp_temp
+    
+resident sale_basic
+group by hu_reference;
+
+duplicate_order:
+NoConcatenate
+load
+	hu_reference,
+	if(cp_temp > 1,'Incorrect') as cp_duplicate_order
+resident duplicate_order_temp;
+
+drop table duplicate_order_temp;

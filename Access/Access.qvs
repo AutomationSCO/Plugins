@@ -1,0 +1,9 @@
+
+Section Access;
+
+ LOAD
+     "ACCESS",
+     "USERID"
+ FROM [lib://Geo_AMS/Automation/BI/Plugins/Access/users.csv] (txt, utf8, embedded labels, delimiter is ',', msq);
+
+Section Application;

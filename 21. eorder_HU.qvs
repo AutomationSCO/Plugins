@@ -1,0 +1,90 @@
+Eorder_HU:
+left keep(sale_basic)
+LOAD distinct
+    
+    sale_service_id as hu_reference,
+    //sale_HU_internal_id as hu_reference,
+    sale_HU_customer_reference as eorder_HU_customer_reference,
+    sale_hu_record_date as eorder_hu_record_date,
+    sale_hu_shipping_unit as eorder_hu_shipping_unit,
+    sale_hu_shipping_unit_description as eorder_hu_shipping_unit_description,
+    sale_hu_length_m as eorder_hu_length_m,
+    sale_hu_height_m as eorder_hu_height_m,
+    sale_hu_width_m as eorder_hu_width_m,
+    //sale_hu_length_m*sale_hu_height_m*sale_hu_width_m as eorder_hu_volume_m3,
+    sale_hu_length_m&sale_hu_height_m&sale_hu_width_m as eorder_hu_lxhxw,
+    sale_hu_weight_kg as eorder_hu_weight_kg,
+    sale_hu_volume_m3 as eorder_hu_volume_m3,
+    sale_HU_product_reference as eorder_HU_product_reference,
+    sale_HU_uno_code as eorder_HU_uno_code,
+    sale_HU_dangerous_category as eorder_HU_dangerous_category,
+    sale_HU_classification_code as eorder_HU_classification_code,
+    sale_HU_Number_Of_Parcel as eorder_HU_Number_Of_Parcel,
+    sale_HU_loading_meter as eorder_HU_loading_meter,
+    sale_HU_external_reference as eorder_HU_external_reference,
+    sale_hu_business_scope_id as eorder_hu_business_scope_id,
+    sale_hu_business_scope_name as eorder_hu_business_scope_name,
+    sale_hu_business_scope_path as eorder_hu_business_scope_path,
+    sale_hu_creation_datetime as eorder_hu_creation_datetime,
+    sale_hu_update_datetime as eorder_hu_update_datetime,
+    sale_hu_deteled_datetime as eorder_hu_deteled_datetime,
+    sale_hu_dangerous_goods as eorder_hu_dangerous_goods,
+    sale_hu_package_no as eorder_hu_package_no,
+    sale_hu_consolidation_key as eorder_hu_consolidation_key,
+    sale_hu_dimension_unit as eorder_hu_dimension_unit,
+    sale_hu_packaging_height as eorder_hu_packaging_height,
+    sale_hu_packaging_length as eorder_hu_packaging_length,
+    sale_hu_packaging_weight as eorder_hu_packaging_weight,
+    sale_hu_packaging_width as eorder_hu_packaging_width,
+    sale_hu_weight_unit as eorder_hu_weight_unit
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_HU.qvd]
+(qvd)
+
+where app_source='eOrder'
+;
+
+
+[eorder_hu_items_qty]:
+left join(Eorder_HU)
+Load
+    hu_reference,
+    count(eorder_hu_package_no) as eorder_hu_qty
+
+resident [Eorder_HU] group by hu_reference;
+
+Eorder_HU_Compum:
+left keep(sale_basic)
+LOAD
+    //sale_service_system_id,
+    sale_service_id as hu_reference,
+    sale_HU_internal_id as eorder_HU_internal_id,
+    //sale_HU_customer_reference,
+    sale_hu_compum_internal_id as eorder_hu_compum_internal_id,
+    sale_hu_case_id,
+    //app_source,
+    //sale_hu_record_date,
+    sale_hu_compum_shipping_unit as eorder_hu_compum_shipping_unit,
+    sale_hu_compum_shipping_unit_description as eorder_hu_compum_shipping_unit_description
+    //sale_hu_compum_length_m,
+    //sale_hu_compum_height_m,
+    //sale_hu_compum_width_m,
+    //sale_hu_compum_weight_kg,
+    //sale_hu_compum_volume_m3,
+    //sale_hu_compum_business_scope_id,
+    //sale_hu_compum_business_scope_name,
+    //sale_hu_compum_business_scope_path,
+    //sale_hu_compum_creation_datetime,
+    //sale_hu_compum_update_datetime,
+    //sale_hu_compum_deteled_datetime,
+    //sale_hu_compum_dangerous_goods,
+    //sale_hu_compum_package_no,
+    //sale_hu_compum_consolidation_key,
+    //sale_hu_compum_dimension_unit,
+    //sale_hu_compum_packaging_height,
+    //sale_hu_compum_packaging_length,
+    //sale_hu_compum_packaging_width,
+    //sale_hu_compum_packaging_weight,
+    //sale_hu_compum_weight_unit
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_HU_compum.qvd]
+(qvd);

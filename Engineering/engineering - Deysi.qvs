@@ -1,0 +1,15 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main_unlock.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Engineering/0.1 Main - Deysi.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Engineering/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/57. eorder_shipment_inner.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/21. eorder_HU.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/26. sale_finance_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/33. eorder_hu_item.qvs]);
+
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/3. finance_input.qvs]);
+
+exit script;

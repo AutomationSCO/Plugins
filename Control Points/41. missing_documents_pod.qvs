@@ -1,0 +1,29 @@
+attached_documents_temp:
+noconcatenate
+load  
+	sale_service_system_id,
+    1 as flag
+resident sale_basic
+where sale_app_source = 'MPO'
+;
+
+
+left join(attached_documents_temp)
+load 
+	sale_service_system_id,
+    sale_document_id
+resident attached_documents
+where sale_document_id = 'POD';
+
+
+cp_attached_documents:
+noconcatenate
+load
+	sale_service_system_id,
+    'Incorrect' as cp_attached_documents_pod
+resident attached_documents_temp
+where len(sale_document_id) = 0
+;
+
+
+drop table attached_documents_temp;

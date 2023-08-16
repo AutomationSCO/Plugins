@@ -1,0 +1,212 @@
+[tracking_references]:
+left keep(sale_basic)
+LOAD
+    _id,
+    _source.tracking_request.references.ref as sale_service_id,
+     _source.tracking_request.references.ref as tracking_request.references,
+    _source.tracking_request.references.type as tracking_references_type,
+    _source.tracking_request.references_idx as tracking_references_idx
+FROM [lib://QVD IOT/Tracking_data__source_tracking_request_references.qvd]
+(qvd)
+//where len(trim(_source.tracking_request.references.ref)) > 2
+;
+
+[tracking_data_]:
+left keep(tracking_references)
+LOAD
+    _id,
+    _source._kuzzle_info.author as tracking_data_author,
+    //_source._kuzzle_info.createdAt,?
+    //_source._kuzzle_info.updatedAt,?
+    _source._kuzzle_info.updater as tracking_data_updater,
+    //_source.aggregationId, ?
+    _source.air.altitude as tracking_data_altitude,
+    _source.air.location.lat as tracking_data_location_air_lat,
+    _source.air.location.lon as tracking_data_location_air_lon,
+    _source.air.locationMethod as tracking_data_air_locationMethod,
+    _source.air.speed as tracking_data_speed,
+    _source.alarmMaxSeverity as tracking_data_alarmMaxSeverity,
+    _source.messageNumber as tracking_data_messageNumber,
+    _source.reportId as tracking_data_reportId,
+    _source.sourceType as tracking_data_sourceType,
+    _source.timeOfReceipt as tracking_data_timeOfReceipt,
+    _source.timeOfReport as tracking_data_timeOfReport,
+    _source.tracker.batteryPercent as tracking_data_batteryPercent,
+    if(_source.tracker.batteryPercent < 15,'Incorrect','Correct') as tracking_data_batteryPercent_KPI,
+    _source.tracker.deviceId as tracking_data_deviceId,
+    _source.tracker.deviceType as tracking_data_deviceType,
+    _source.tracker.humidity as tracking_data_humidity,
+    if(_source.tracker.humidity > 90,'Incorrect','Correct') as tracking_data_humidity_KPI,
+    _source.tracker.isButtonPushed as tracking_data_isButtonPushed,
+    _source.tracker.isDropped as tracking_data_isDropped,
+    _source.tracker.isTilted as tracking_data_isTilted,
+    _source.tracker.journeyId as tracking_data_journeyId,
+    _source.tracker.light as tracking_data_light,
+    _source.tracker.location.lat as tracking_data_lat,
+    _source.tracker.location.lon as tracking_data_lon,
+    _source.tracker.locationMethod as tracking_data_locationMethod,
+    _source.tracker.orientation as tracking_data_orientation,
+    _source.tracker.pressure as tracking_data_pressure,
+    _source.tracker.reportInterval as tracking_data_reportInterval,
+    _source.tracker.shockDirection as tracking_data_shockDirection,
+    _source.tracker.shockMagnitude as tracking_data_shockMagnitude,
+    _source.tracker.shockX as tracking_data_shockX,
+    _source.tracker.shockY as tracking_data_shockY,
+    _source.tracker.shockZ as tracking_data_shockZ,
+    _source.tracker.state as tracking_data_state,
+
+
+    _source.tracker.temperature as tracking_data_temperature,
+    if(_source.tracker.temperature < 0 or _source.tracker.temperature > 50, 'Incorrect','Correct') as tracking_data_temperature_KPI,
+    if(_source.tracker.temperature < 15 or _source.tracker.temperature > 50, 'Incorrect','Correct') as tracking_data_temperature_KPI_mcc,    
+    _source.tracking_request.air.arrivalAirport.iata as tracking_request_data_arrivalAirport,
+    _source.tracking_request.air.carrier as tracking_request_data_carrier,
+    _source.tracking_request.air.departureAirport.iata as tracking_request_data_departureAirport,
+    _source.tracking_request.air.flightNumber as tracking_request_data_flightNumber,
+    //_source.tracking_request.air.flightStatus as tracking_request_data_flightStatus,
+    //_source.tracking_request.air.trackingId as tracking_request_data_trackingId,
+    _source.tracking_request.businessUnit as tracking_request_data_businessUnit,
+    _source.tracking_request.connectorId as tracking_request_data_connectorId,
+    _source.tracking_request.endTracking as tracking_request_data_endTracking,
+    _source.tracking_request.scope as tracking_request_data_scope,
+    _source.tracking_request.serviceId as tracking_request_data_serviceId,
+    _source.tracking_request.sourceType as tracking_request_data_sourceType,
+    _source.tracking_request.startTracking as tracking_request_data_startTracking,
+    _source.tracking_request.status as tracking_request_data_status,
+    //_source.tracking_request.systemInitiated as tracking_request_data_systemInitiated,
+    _source.tracking_request.tracker.deviceId as tracking_request_data_deviceId//,    _source.trackingRequestId as tracking_data_trackingRequestId
+
+FROM [lib://QVD IOT/Tracking_data.qvd]
+(qvd)
+;
+
+
+[battery_status]:
+noconcatenate
+Load  distinct
+    _id,
+    max(tracking_data_timeOfReport) as tracking_data_timeOfReport_last
+
+resident tracking_data_
+group by _id;
+
+
+//report------------------------------------------------------------------------------
+
+[battery_rpa_temp]:
+noconcatenate
+Load  distinct
+    tracking_data_deviceId,
+    date(max(tracking_data_timeOfReport),'DD/MM/YYYY hh:mm:ss') as date,
+    FirstSortedValue(tracking_data_batteryPercent,- tracking_data_timeOfReport) as batery
+
+resident tracking_data_
+group by tracking_data_deviceId
+;
+
+left join(battery_rpa_temp)
+    load distinct
+    tracking_data_deviceId,
+    _id
+resident tracking_data_;
+
+left join(battery_rpa_temp)
+load distinct
+    _id,
+    sale_service_id
+
+resident tracking_references;
+
+left join(battery_rpa_temp)
+load distinct
+    sale_service_id,
+    sale_start_country,
+    sale_start_city,
+    sale_end_city,
+    sale_end_country,
+    sale_status
+
+resident sale_basic;
+
+drop field _id from battery_rpa_temp;
+
+battery_rpa:
+noconcatenate
+load distinct
+    *
+
+resident battery_rpa_temp;
+
+drop table battery_rpa_temp;
+
+Store [battery_rpa] into [lib://Geo_AMS/Automation\file_operations\from_qlik/battery_rpa.csv](txt);
+
+drop table battery_rpa;
+
+
+
+/*exit script;
+[source_references]:
+LOAD
+    _id,
+    _source.references.ref as source_references_ref,
+    _source.references.type as source_references_type,
+    _source.references_idx as source_references_idx
+FROM [lib://QVD IOT/Tracking_request__source_references.qvd]
+(qvd);
+
+
+
+
+
+
+[source_alarm]:
+LOAD
+    _id,
+    _source.alarmTemplateId as source_alarm_id,
+    _source.alarmTemplateId_idx as source_alarm_idx
+FROM [lib://QVD IOT/Tracking_request__source_alarmTemplateId.qvd]
+(qvd);
+
+[tracking_alarm]:
+LOAD
+    _id,
+    _source.tracking_request.alarmTemplateId as tracking_alarm_id,
+    _source.tracking_request.alarmTemplateId_idx as tracking_alarm_idx
+
+FROM [lib://QVD IOT/tracking_data__source_tracking_request_alarmTemplateId.qvd]
+(qvd);
+
+
+
+
+
+
+exit script;
+LOAD
+    _id,
+    _source._kuzzle_info.author,
+    _source._kuzzle_info.createdAt,
+    _source._kuzzle_info.updatedAt,
+    _source._kuzzle_info.updater,
+    _source.air.arrivalAirport.iata,
+    _source.air.carrier,
+    _source.air.departureAirport.iata,
+    _source.air.flightNumber,
+    _source.air.flightStatus,
+    _source.air.trackingId,
+    _source.businessUnit,
+    _source.connectorId,
+    _source.deleted,
+    _source.endTracking,
+    _source.parentId,
+    _source.scope,
+    _source.serviceId,
+    _source.sourceType,
+    _source.startTracking,
+    _source.status,
+    _source.systemInitiated,
+    _source.tracker.deviceId
+FROM [lib://QVD IOT/Tracking_request.qvd]
+(qvd);
+*/

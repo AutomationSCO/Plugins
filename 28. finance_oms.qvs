@@ -1,0 +1,19 @@
+
+oms:
+left keep(sale_basic)
+LOAD
+    CSO AS sale_service_id,
+    LastValue("Robot Run Datetime") AS sale_oms_robot_run_datetime,
+    LastValue("OMS VERIFIED AMOUNT - R Y M") AS sale_oms_verified_amount,
+    LastValue("Data Duplicated") AS sale_oms_data_duplicated
+FROM [lib://Geo_AMS/O2C AMS/BV Dashboard/Plugins/DDB/ddb_database.xlsx] (ooxml, embedded labels, table is Sheet1)
+GROUP BY
+    CSO;
+
+LEFT keep (sale_service_specific_data)
+LOAD DISTINCT
+    HAWB# AS sale_hawb,
+    Status AS sale_oms_manifest_status
+FROM [lib://Geo_AMS/LogisticsAnalyst/Outbound/KIs Monitor.xlsx] (ooxml, embedded labels, table is Hoja1);
+
+

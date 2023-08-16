@@ -1,0 +1,86 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Teams/0.1 Main_vendor_managment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs]);
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/14. DIMC.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/15. Sale_FirstBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/16. Buy_LastBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/10. ST.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/8. Precall.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/23. full_FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/57. eorder_shipment_inner.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/58. eorder_order_inner.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/26. sale_finance_service_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/52. carrierdex.qvs]);
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Scorecard/4PL/Dues.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Scorecard/4PL/Escalations.qvs]);
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/1. missing_awb.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/2. dues no store.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/3. finance_input.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/5. IOT.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/4. Amount.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/6. late_cw.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/7. timeliness_completeness.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/8. cw_timeliness_completeness.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/20. missing_hawb.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/21. missing_chawb.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/22. missing_tracking_number.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/28. missing_planned_hawb.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/29. planning_lead_time.qvs]);
+
+
+
+
+qualitative_SC:
+LOAD
+    Analyst as qualitative_analyst,
+    Percentage as qualitative_aging,
+    "Year-Week" as qualitative_yearweek,
+    "Year-Month" as qualitative_yearmonth,
+    Metric as qualitative_metric,
+    Team as qualitative_team
+FROM [lib://Geo_AMS/LogisticsAnalyst/SC/Qualitative SC.xlsx]
+(ooxml, embedded labels, table is VM);
+
+
+
+[leo_efficency]:
+noconcatenate
+LOAD
+"Year" as leo_year,
+"Week" as leo_week,
+//"Month" as leo_month,
+Team as leo_team,
+"Declared FTE's" as leo_declared_ftes,
+"Extra Hours" as leo_extra_hours,
+"CLIENT & DEPARTMENT" as leo_client_departament,
+If(Team = 'GUAD.IBM.OPS.CM','Carrier Management',
+If(Team = 'GUAD.IBM.OPS.INTEREMEA','Interpipes EMEA-AMS',
+If(Team = 'GUAD.IBM.OPS.INTERAPAC','Interpipes APAC',
+If(Team = 'GUAD.ALIGN.OPS','Align',
+If(Team = 'GUAD.KEISER.OPS','Keiser',
+If(Team = 'GUAD.KYNDRYL.OPS','Kyndryl',
+If(Team = 'GUAD.WHITEGLOVE.OPS','White Glove',
+If(Team = 'GUAD.IBM.OPS.VM','Vendor Management',
+If(Team = 'GUAD.IBM.OPS.CSRINTRA','INTRA CSR',
+If(Team = 'GUAD.IBM.OPS.CSRINTER','INTER CSR',
+if(Team = 'GUAD.IBM.OPS.IMPORTSGDL','Imports MX',
+    'Other'))))))))))) as leo_ops_team,
+"Efficiency Rate" as leo_rate
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/LEO DB/LEO EFF AMS DASHBOARD.xlsx]
+(ooxml, embedded labels, table is [Data Base]);
+
+Manual_input:
+left keep (sale_basic)
+LOAD distinct
+    "CSO Number" as sale_service_id,
+    "Late Responsible",
+    Comments as "Comments V"
+FROM [lib://Geo_AMS/LogisticsAnalyst/Vendors/Vendors Visibility Report 2021.xlsx]
+(ooxml, embedded labels, table is Hoja1);

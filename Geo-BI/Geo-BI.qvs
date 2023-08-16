@@ -1,0 +1,1201 @@
+//   ------ GEO BI ------
+//   LAST UPDATE
+//   Author:  Roberto Navarro
+//   Update date: 17/07/2023
+
+// Loading Dependences
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0.1 Main geo_bi.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Finance Team.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/2. ibm_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/10. ST.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/12. Specific_data_all_clients_buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/30. sale_activity_report.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/16. Buy_LastBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/19. eorder_shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/4. HU_Items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/31. buy_activity_report.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/15. Sale_FirstBE.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/27. buy_finance_tariff_items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/44. sale_first_be_sort.qvs]);
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/2. dues no store.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/4. Amount.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/5. IOT.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/8. cw_timeliness_completeness.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/9. missing_adhoc.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/11. wheels_up.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/12. wheels_down.qvs]);
+
+
+//----------------------------------
+//--------   Total Report   --------
+//----------------------------------
+
+//sale-buy
+left join([sale_basic])
+LOAD
+    *
+resident [sale-buy];
+
+Drop table [sale-buy];
+
+//buy Basic
+left join([sale_basic])
+LOAD
+    *  
+resident [buy_basic];
+Drop table [buy_basic];
+
+
+[Total Report]:
+Noconcatenate
+LOAD
+    *
+resident [sale_basic];
+
+
+//-----------------------------------------
+//--------   SOLIDIGM MISSING CW   --------
+//-----------------------------------------
+
+Solidigm_missing_cw_temp:
+NoConcatenate
+LOAD Distinct
+    sale_service_id,
+    buy_service_id,
+    sale_service_execution_followup,
+    hu_reference,
+    Client,
+    Carrier
+resident [Total Report];
+
+Left Join(Solidigm_missing_cw_temp)
+LOAD
+    buy_service_id,
+    carrierConfirmedWeight,
+    buy_hawb
+resident buy_service_specific_data;
+
+
+Solidigm_missing_cw:
+NoConcatenate
+NoConcatenate
+Load  distinct
+    sale_service_id,
+    buy_service_id,
+    hu_reference,
+    carrierConfirmedWeight,
+    buy_hawb
+resident Solidigm_missing_cw_temp
+WHERE WildMatch(Client, 'SOLIDIGM*') and
+      WildMatch(Carrier, 'FED*') and
+      (Len(carrierConfirmedWeight)=0 or carrierConfirmedWeight=0) and
+      MATCH(sale_service_execution_followup, 'FINISHED');
+
+
+drop Table Solidigm_missing_cw_temp;
+Store Solidigm_missing_cw into [lib://Geo_AMS/Automation\file_operations\from_qlik/Solidigm_missing_cw.csv](txt);
+drop table Solidigm_missing_cw;
+
+
+//-----------------------------------------------
+//--------   Intra NA Carrier Tracking   --------
+//-----------------------------------------------
+
+IntraNA_Carrier_Tracking_Temp:
+Noconcatenate
+load distinct
+    sale_service_id,
+    buy_service_id,
+    sale_buy_id,
+ 	ConsolidatedAWB,
+    sale_service_execution_followup,
+    buy_service_execution_followup,
+    Carrier,
+    sale_lane
+resident [Total Report];
+
+Left Join (IntraNA_Carrier_Tracking_Temp)
+LOAD
+    sale_buy_id,
+    Del_Team_Responsible,
+    Del_Analyst,
+    PU_Analyst
+resident Owners;
+
+IntraNA_Carrier_Tracking:
+NoConcatenate
+load Distinct
+	buy_service_id as sso_number,
+    ConsolidatedAWB,
+    PU_Analyst,
+    Del_Analyst,
+    Carrier
+resident [IntraNA_Carrier_Tracking_Temp]
+WHERE (match(sale_service_execution_followup,'CD', 'APP') and
+	   match(sale_lane, 'Intra AMS', 'Inbound') and
+       match(Carrier,'APPLE_EXP','FRFORCE_US','PTRANS_US','MOHAWK_US', 'BTX_US','AMER_LH','MACH1_US','TAZ') and 
+       match(Del_Team_Responsible, 'Carrier Management', 'Vendor Management')) 
+       or
+      (match(Carrier,'AMER_LH') and buy_service_execution_followup <> 'CL' and
+       match(Del_Team_Responsible, 'Carrier Management', 'Vendor Management') and 
+       match(sale_lane, 'Intra AMS'));
+drop Table IntraNA_Carrier_Tracking_Temp;
+
+
+Store IntraNA_Carrier_Tracking into [lib://Geo_AMS/Automation\file_operations\from_qlik/IntraNA_Carrier_Tracking.csv](txt);
+
+drop table IntraNA_Carrier_Tracking;
+
+
+//------------------------------------------------------------------
+//--------   Missing Chargeable Weight Interpipes HUNGARY   --------
+//------------------------------------------------------------------
+
+HUN_CW:
+Noconcatenate
+load distinct
+    sale_service_id,
+    buy_service_id as SSO,
+    hu_reference,
+    sale_service_execution_followup,
+    buy_service_execution_followup,
+    sale_international_domestic_flag,
+    sale_start_country,
+    sale_end_country,
+    sale_actual_start_yearmonth,
+    buy_planned_end_date
+resident [Total Report]
+WHERE sale_international_domestic_flag = 'International' and
+      sale_service_execution_followup = 'CL' and
+      sale_start_country = 'HU' and
+      sale_end_country = 'US'
+     and match(sale_actual_start_yearmonth,'$(vPastYearMonth)','$(vCurrentYearMonth)'); 
+
+Left Join (HUN_CW)
+LOAD
+    sale_service_id,
+    sale_specific_info_weight,
+    sale_hawb
+resident sale_service_specific_data;
+
+Store HUN_CW into [lib://Geo_AMS/Automation\file_operations\from_qlik/HUN_CW.csv](txt);
+
+drop table HUN_CW;
+
+
+//----------------------------------------------------------
+//--------   Missing Chargeable Weight Interpipes   --------
+//----------------------------------------------------------
+
+Missing_Chargeable_Weight_Temp:
+Noconcatenate
+load distinct
+    sale_service_id,
+    Client,
+    Carrier,
+    buy_service_id as SSO,
+    hu_reference,
+    sale_service_execution_followup,
+    buy_service_execution_followup,
+    sale_start_country,
+    sale_end_country,
+    (buy_start_geo & buy_end_geo) as buy_start_end_geo,
+    sale_start_date,
+    sale_lane,
+    sale_actual_end_yearmonth,
+    sale_actual_start_yearmonth,
+    buy_chargeable_weight
+resident [Total Report];
+
+Left Join (Missing_Chargeable_Weight_Temp)
+LOAD
+    sale_service_id,
+    sale_specific_info_weight,
+    sale_hawb
+resident sale_service_specific_data;
+
+Missing_Chargeable_Weight:
+NoConcatenate
+load Distinct
+    sale_service_id,
+    SSO,
+    sale_hawb,
+    hu_reference,
+    buy_start_end_geo,
+    sale_specific_info_weight,
+    sale_start_date,
+    sale_actual_end_yearmonth,
+    buy_chargeable_weight,
+    sale_actual_start_yearmonth
+resident Missing_Chargeable_Weight_Temp
+WHERE Client = 'IBM' and
+sale_lane= 'Outbound' and
+MATCH(buy_start_end_geo, 'AMSAPAC', 'AMSEMEA', 'APACAMS', 'EMEAAMS') and
+MATCH(sale_service_execution_followup, 'CD', 'CL') and
+MATCH(buy_service_execution_followup, 'CD', 'CL') and
+Carrier = 'GEODIS FF' and
+(len(sale_specific_info_weight)= 0 or sale_specific_info_weight = 0 or len(buy_chargeable_weight)= 0 or buy_chargeable_weight = 0) 
+and match(sale_actual_start_yearmonth,'$(vPastYearMonth)','$(vCurrentYearMonth)');
+
+drop table Missing_Chargeable_Weight_Temp;
+Store Missing_Chargeable_Weight into [lib://Geo_AMS/Automation\file_operations\from_qlik/Missing_CW.csv](txt);
+drop table Missing_Chargeable_Weight;
+
+
+//----------------------------------
+//--------   ALIGN Report   --------
+//----------------------------------
+
+Align_MPO_Report_Temp:
+NoConcatenate
+Load Distinct
+	sale_service_id,
+    buy_service_id,
+    hu_reference,
+	Client,
+    sale_incoterm,
+    sale_weight_kg,
+    buy_service_nature
+Resident [Total Report]
+Where match(Client, 'ALIGN');
+
+left join(Align_MPO_Report_Temp)
+load
+	sale_service_id,
+    sale_specific_info_mot,
+    sale_requested_service
+resident sale_service_specific_data;
+
+Align_MPO_Report:
+NoConcatenate
+Load Distinct
+	sale_service_id,
+    buy_service_id,
+    hu_reference,
+    sale_requested_service,
+    sale_incoterm,
+    sale_weight_kg,
+    sale_specific_info_mot,
+    buy_service_nature
+Resident Align_MPO_Report_Temp;
+
+drop Table Align_MPO_Report_Temp;
+Store Align_MPO_Report into [lib://Geo_AMS/Automation\file_operations\from_qlik/Align/MPO_Shipment.csv](txt);
+drop Table Align_MPO_Report;
+
+
+//---------------------------------
+//--------   Ramon Input   --------
+//---------------------------------
+ramon_input:
+NoConcatenate
+LOAD Distinct
+	sale_service_id,
+    hu_reference,
+    Client,
+    IsGNumber
+
+resident [Total Report];
+
+Store ramon_input into [lib://Geo_AMS/Automation\file_operations\from_qlik/ramon_input.csv](txt);
+
+DROP Table ramon_input;
+
+
+//----------------------------------
+//--------   ALIGN Report   --------
+//----------------------------------
+
+Acce_manifest_temp:
+Noconcatenate
+Load Distinct
+    sale_service_id,
+    sale_service_loading_number,
+    buy_service_id,
+    Carrier,
+    buy_end_name,
+    buy_end_addres,
+    buy_end_city,
+    buy_end_zip_code,
+    hu_reference,
+    sale_end_city,
+    sale_service_execution_followup,
+    sale_weight_lb
+
+resident [Total Report]
+where match(sale_service_execution_followup,'CD')
+and Client = 'IBM'
+//and match(Carrier,'ACCELE')
+and sale_start_country = 'MX'
+and sale_end_country = 'US'
+;
+
+left join(Acce_manifest_temp)
+load
+    buy_service_id,
+    buy_service_order_scenario
+resident buy_service_specific_data
+;
+
+
+left join(Acce_manifest_temp)
+load
+    sale_service_id,
+    buy_service_id as buy_service_id_finalmile,
+    Carrier as final_mile_carrier
+resident Acce_manifest_temp
+where buy_service_order_scenario = 'LL'
+//where not match(Carrier,'ACCELE','ESGARI_MX','INNOVATIVO','TA_LOG_US')
+;
+
+
+Acce_manifest:
+noconcatenate
+load distinct
+    sale_service_id,
+    sale_service_loading_number,
+    buy_service_id,
+    Carrier,
+    final_mile_carrier,
+    buy_end_name,
+    buy_end_addres,
+    buy_end_city,
+    buy_end_zip_code
+
+resident Acce_manifest_temp
+where match(buy_service_order_scenario,'LI')
+and match(Carrier,'ACCELE')
+;
+
+left join(Acce_manifest)
+load
+    sale_service_id,
+    sale_hu_LxHxW_M3,
+    sale_hu_compum_weight_kg
+resident hu_compum;
+
+drop table Acce_manifest_temp;
+
+drop fields sale_service_id from Acce_manifest;
+
+Store [Acce_manifest] into [lib://Geo_AMS/Automation\BI\Reports/Acce_manifest.csv](txt);
+
+drop table Acce_manifest;
+
+
+//--------------------------------------
+//--------   kyndryl_endicott   --------
+//--------------------------------------
+
+kyndryl_endicott:
+Noconcatenate
+Load Distinct
+
+    sale_service_id,
+    hu_reference
+
+resident [Total Report]
+where match(sale_service_execution_followup,'APP','CD')
+and sale_end_city = 'ENDICOTT'
+and Client = 'KYNDRYL'
+and sale_weight_lb >=1500
+;
+
+left join(kyndryl_endicott)
+load distinct
+    sale_service_id,
+    sale_hawb
+resident sale_service_specific_data;
+
+// Eorder_Shipment:
+// left join(kyndryl_endicott)
+// load
+//     hu_reference,
+//     eorder_shipment_serivce_portal
+// resident Eorder_Shipment;
+
+
+// left join(kyndryl_endicott)
+// load
+//     sale_service_id,
+//     sale_hu_LxHxW_M3
+// resident hu_compum;
+
+Store [kyndryl_endicott] into [lib://Geo_AMS/Automation\BI\Reports/kyndryl_endicott.csv](txt);
+
+drop table kyndryl_endicott;
+
+
+//-----------------------------
+//--------   FDX COE   --------
+//-----------------------------
+
+[FDX_COE]:
+Load Distinct
+
+    buy_service_id,
+    sale_service_id,
+    sale_buy_id,
+    hu_reference,
+    sale_service_execution_followup,
+    buy_service_execution_followup,
+    buy_executor_short_name,
+    sale_service_short_name,
+    sale_international_domestic_flag
+
+resident [Total Report]
+where match(sale_creation_year,'$(vCurrentYear)','$(vPastyear)') 
+and Carrier = 'FEDEX'
+
+or match(sale_service_short_name,'IBMMAFDXGSP/US','IBMMAFDXGSP/CA')
+//and not match(sale_service_execution_followup,'FINISHED','CL','NAP')
+;
+
+left join(FDX_COE)
+load distinct 
+    sale_service_id,
+    sale_invoice_follow_up
+
+resident FA;
+
+left join(FDX_COE)
+load distinct
+    sale_service_id,
+    sale_hawb,
+    sale_cuhawb,
+    sale_tracking_number
+resident sale_service_specific_data;
+
+left join(FDX_COE)
+load distinct
+    sale_service_id,
+    fdx_bso_flag
+
+resident ibm_specific_info;
+
+left join(FDX_COE)
+load distinct
+    sale_buy_id,
+    PU_Team_Responsible,
+    PU_Analyst,
+    Del_Team_Responsible,
+    Del_Analyst
+
+resident Owners;
+
+left join(FDX_COE)
+load distinct
+    *
+resident be_sort;
+
+Store [FDX_COE] into [lib://Geo_AMS/Automation\file_operations\from_qlik/Fedex/Fedex_COE_2.csv](txt);
+
+drop table FDX_COE;
+
+
+//--------------------------------
+//--------   Booking_db   --------
+//--------------------------------
+
+booking_db:
+noconcatenate
+load distinct
+    sale_service_id,
+    sale_buy_id,
+    buy_service_id,
+    hu_reference,
+    sale_start_geo,
+    sale_start_country,
+    sale_start_state,
+    sale_start_city,
+    sale_start_zip_code,
+    sale_end_geo,
+    sale_end_country,
+    sale_end_state,
+    sale_end_city,
+    sale_end_zip_code,
+    Carrier,
+    Client,
+    sale_service_short_name,
+    sale_service_execution_followup,
+    sale_start_date,
+    sale_actual_start_date,
+    sale_end_date,
+    sale_actual_end_date,
+    sale_executed_SLA,
+    buy_executed_SLA,
+    GEODIS_ops_Team,
+    sale_geo_to_geo,
+    sale_ams_billing,
+    sale_latam_flag,
+    sale_caribbean_flag,
+    buy_chargeable_weight
+
+
+resident [Total Report]
+where sale_GSP_Flag = 0
+and GEODIS_ops_Team = 'Inter Team'
+and match(Client,'IBM','SOFTLAYER')
+;
+
+left join(booking_db)
+load distinct
+    sale_buy_id,
+    PU_Team_Responsible,
+    PU_Analyst,
+    Del_Team_Responsible,
+    Del_Analyst
+
+resident Owners;
+
+left join(booking_db)
+load 
+    sale_service_id,
+    sale_iot_flag,
+    sale_adhoc_reference,
+    sale_order_type,
+    sale_hawb,
+    sale_cuhawb,
+    sale_tracking_number,
+    //sale_original_chargeable_weight,
+    sale_specific_info_service_type,
+    sale_requested_service,
+    sale_specific_info_weight
+
+resident sale_service_specific_data;
+
+
+left join(booking_db)
+load 
+    sale_service_id,
+    sale_event_wheels_up_actual_date,
+    sale_event_wheels_down_actual_date
+
+resident be_sort;
+
+left join(booking_db)
+load 
+    sale_service_id,
+    cp_wheels_up
+
+resident cp_wheels_up;
+
+left join(booking_db)
+load 
+    sale_service_id,
+    cp_wheels_down
+resident cp_wheels_down;
+
+left join(booking_db)
+load 
+    sale_service_id,
+    cp_due_pickup_bracket,
+    cp_due_delivery_bracket
+resident cp_due_pickup_due_delivery;
+
+left join(booking_db)
+load 
+    buy_service_id,
+    cp_completness_71
+
+resident cp_completness_71;
+
+left join(booking_db)
+load 
+    sale_service_id,
+    cp_iot_event
+
+resident cp__IOT_BE;
+
+left join(booking_db)
+load 
+    buy_service_id,
+    buy_requested_service
+resident buy_service_specific_data;
+
+left join(booking_db)
+load
+    sale_service_id,
+    sale_eur_amount_group,
+    buy_eur_amount_group,
+    cp_sale_buy_amount_difference,
+    amount_flag
+resident cp_amount;
+
+
+Store [booking_db] into [lib://Geo_AMS/Automation\file_operations\from_qlik/booking_db.csv](txt);
+
+drop table booking_db;
+
+
+//-----------------------------------
+//--------   Spotlight Gap   --------
+//-----------------------------------
+
+spotlight_gap:
+noconcatenate
+load distinct
+    sale_service_id,
+    buy_service_id,
+    Carrier
+
+resident [Total Report]
+where sale_app_source = 'MPO'
+and match(sale_service_execution_followup,'PLANNED','STARTED')
+and sale_customer_status = 'Delivered'
+;
+
+Store [spotlight_gap] into [lib://Geo_AMS/Automation\BI\Reports/spotlight_gap.csv](txt);
+
+drop table spotlight_gap;
+
+//----------------------------------
+//--------   Tracking MPO   --------
+//----------------------------------
+tracking_mpo:
+noconcatenate
+load distinct
+    sale_service_id,
+    sale_end_country,
+    Client
+
+resident [Total Report]
+where sale_app_source = 'MPO'
+and match(sale_service_execution_followup,'PLANNED','STARTED')
+;
+
+left join(tracking_mpo)
+load distinct
+    sale_service_id,
+    buy_service_id as planification_buy_service_id,
+    Carrier as planification_carrier
+
+resident [Total Report]
+where sale_app_source = 'MPO'
+and match(buy_service_nature,'PLANIFICATION')
+;
+
+left join(tracking_mpo)
+load distinct 
+    buy_service_id as planification_buy_service_id,
+    buy_hawb as planification_buy_hawb
+resident buy_service_specific_data;
+
+
+left join(tracking_mpo)
+load distinct
+    sale_service_id,
+    buy_service_id as linehaul_buy_service_id,
+    Carrier as linehaul_carrier
+
+resident [Total Report]
+where sale_app_source = 'MPO'
+and match(buy_service_nature,'LINEHAUL')
+;
+
+left join(tracking_mpo)
+load distinct 
+    buy_service_id as linehaul_buy_service_id,
+    buy_hawb as linehaul_buy_hawb
+resident buy_service_specific_data;
+
+left join(tracking_mpo)
+load distinct
+    sale_service_id,
+    buy_service_id as crossdock_buy_service_id,
+    Carrier as crossdock_carrier
+
+resident [Total Report]
+where sale_app_source = 'MPO'
+and match(buy_service_nature,'CROSSDOCK')
+;
+
+left join(tracking_mpo)
+load distinct 
+    buy_service_id as crossdock_buy_service_id,
+    buy_hawb as crossdock_buy_hawb
+resident buy_service_specific_data;
+
+
+left join(tracking_mpo)
+load distinct
+    sale_service_id,
+    buy_service_id as delivery_buy_service_id,
+    Carrier as delivery_crossdock
+
+resident [Total Report]
+where sale_app_source = 'MPO'
+and match(buy_service_nature,'DELIVERY')
+;
+
+left join(tracking_mpo)
+load distinct 
+    buy_service_id as delivery_buy_service_id,
+    buy_hawb as delivery_buy_hawb
+resident buy_service_specific_data;
+
+
+left join(tracking_mpo)
+load distinct
+    *
+resident be_sort;
+
+Store [tracking_mpo] into [lib://Geo_AMS/Automation\file_operations\from_qlik/tracking_mpo.csv](txt);
+
+drop table tracking_mpo;
+
+
+//---------------------------------
+//--------   Middle Mile   --------
+//---------------------------------
+
+middle_mile:
+left keep([Total Report])
+load distinct 
+    sale_service_id,
+    buy_service_id,
+    hu_reference,
+    Carrier
+
+resident [Total Report] 
+where
+match(sale_service_execution_followup,'CD','APP')
+and match(Carrier,'ACCELE','MAGELLAN')
+and buy_start_addres = '2460 WEST AIRFIELD DRIVE #200'
+;
+
+left join(middle_mile)
+load distinct
+    buy_service_id,
+    buy_LastEvent_actual_date as buy_LastEvent35_actual_date
+
+resident buy_last_be
+where buy_LastEvent_code = 35 ;
+
+left join(middle_mile)
+load distinct
+    buy_service_id,
+    buy_LastEvent_actual_date as buy_LastEvent1_actual_date
+
+resident buy_last_be
+where buy_LastEvent_code = 1 ;
+
+
+Store [middle_mile] into [lib://Geo_AMS/Automation\file_operations\from_qlik/middle_mile.csv](txt);
+
+drop table middle_mile;
+
+
+//--------------------------
+//--------   CEVA   --------
+//--------------------------
+
+ceva_tracking:
+left keep([Total Report])
+load distinct 
+    sale_service_id,
+    buy_service_id,
+    sale_buy_id,
+    hu_reference,
+    Client,
+    Carrier
+
+ resident [Total Report] 
+where
+match(sale_service_execution_followup,'CD','APP')
+and match(Carrier,'CEVA')
+;
+
+left join(ceva_tracking)
+load distinct 
+    sale_service_id,
+    sale_tracking_number,
+    sale_hawb,
+    sale_cuhawb
+
+resident sale_service_specific_data;
+
+left join(ceva_tracking)
+load distinct
+    sale_buy_id,
+    PU_Analyst,
+    Del_Analyst
+
+resident Owners;
+
+Store [ceva_tracking] into [lib://Geo_AMS/Automation\file_operations\from_qlik/ceva_tracking.csv](txt);
+
+drop table ceva_tracking;
+
+
+//-----------------------------
+//--------   Weather   --------
+//-----------------------------
+
+weather:
+left keep([Total Report])
+load distinct 
+    sale_start_city & ','& sale_start_country as weather_city
+
+resident [Total Report] 
+where
+match(sale_service_execution_followup,'APP','PLANNED')
+;
+
+concatenate(weather)
+load distinct
+    sale_end_city & ',' & sale_end_country as weather_city
+
+resident [Total Report]
+where
+match(sale_service_execution_followup,'CD','STARTED');
+
+Store [weather] into [lib://Geo_AMS/Automation\file_operations\from_qlik/weather.csv](txt);
+
+drop table weather;
+
+
+//----------------------------------------
+//--------   Incorrect loadings   --------
+//----------------------------------------
+
+incorrect_loadings:
+noconcatenate
+load distinct 
+    sale_service_id,
+    sale_start_country,
+    sale_end_country
+
+resident [Total Report] 
+where
+sale_service_short_name = 'IBM_MD_US/ICTCB1'
+and match(sale_country2country,'US-MX')
+;
+
+
+Store [incorrect_loadings] into [lib://Geo_AMS/Automation\BI\Reports/incorrect_loadings.csv](txt);
+
+drop table incorrect_loadings;
+
+
+//---------------------------------------
+//--------   Cd Finance Report   --------
+//---------------------------------------
+
+cd_finance_report:
+noconcatenate
+load distinct 
+    sale_service_id,
+    sale_executor_short_name,
+    sale_service_execution_followup,
+    sale_actual_start_date,
+    sale_actual_end_date,
+    sale_start_geo,
+    sale_start_country,
+    sale_end_geo,
+    sale_end_country,
+    hu_reference,
+    buy_service_id,
+    buy_executor_short_name,
+    buy_service_execution_followup,
+    buy_actual_start_date,
+    buy_actual_end_date,
+    sale_weight_kg
+
+resident [Total Report] 
+where
+match(sale_service_execution_followup,'CD','STARTED','APP')
+;
+
+
+left join(cd_finance_report)
+LOAD
+    sale_service_id,
+    sale_hawb,
+    sale_adhoc_reference
+
+resident sale_service_specific_data;
+
+left join(cd_finance_report)
+LOAD
+    sale_service_id,
+    sale_activity_report,
+    sale_activity_report_status
+
+resident sale_activity_report;
+
+left join(cd_finance_report)
+LOAD
+    buy_service_id,
+	buy_service_activity_report,
+    buy_service_activity_report_status
+    
+resident buy_activity_report;
+
+Store cd_finance_report into [lib://Geo_AMS/Automation\BI\Reports/cd_finance_report.csv](txt);
+
+drop table cd_finance_report;
+
+//---------------------------------
+//--------   AIT Finance   --------
+//---------------------------------
+[AIT_Finance_temp]:
+noconcatenate
+load distinct
+    buy_service_id
+resident [Total Report]
+WHERE Carrier='AIT';
+
+left join([AIT_Finance_temp])
+load distinct
+    buy_service_id,
+    if(WildMatch(buy_tariff_item, 'HWA*')>0,'HWA',buy_tariff_item ) as [buy_tariff_item],
+    buy_tariff_amount
+resident buy_tariff_items;
+
+AIT_Finance_temp2:
+noconcatenate
+load distinct
+    buy_service_id as SSO,
+    buy_tariff_item as state,
+    buy_tariff_amount
+resident AIT_Finance_temp
+WHERE WildMatch(buy_tariff_item, 'HWA*', 'FSC')>0;
+
+DROP Table AIT_Finance_temp;
+
+
+AIT_Finance_temp3:
+NoConcatenate
+load Distinct
+	SSO,
+    state,
+    buy_tariff_amount
+resident AIT_Finance_temp2;
+
+DROP Table AIT_Finance_temp2;
+
+Left Join (AIT_Finance_temp3)
+LOAD SSO,
+	 state,
+	 sum(buy_tariff_amount) as buy_tariff_amount
+Resident AIT_Finance_temp3
+Group By SSO, state;
+
+AIT_accesorials_temp:
+LOAD DISTINCT SSO
+Resident AIT_Finance_temp3;
+
+FOR i = 1 to FieldValueCount('state')
+	LET vState = FieldValue('state', $(i));
+	Left Join (AIT_accesorials_temp)
+	LOAD DISTINCT 
+        SSO,
+		buy_tariff_amount as [$(vState)]
+	Resident AIT_Finance_temp3
+	Where state = '$(vState)';
+NEXT
+
+DROP Table AIT_Finance_temp3;
+
+Final_AIT:
+NoConcatenate
+LOAD Distinct
+	sale_service_id as CSO,
+    buy_service_id as SSO,
+    buy_start_zip_code as Start_Zip,
+    buy_end_zip_code as End_Zip,
+    eorder_flag
+resident [Total Report]
+WHERE Carrier='AIT';
+
+left join([Final_AIT])
+load distinct
+    sale_service_id as CSO,
+    sale_hawb as HAWB
+resident sale_service_specific_data;
+
+Left Join (Final_AIT)
+LOAD 
+	*
+resident AIT_accesorials_temp;
+
+DROP Table AIT_accesorials_temp;
+
+Store Final_AIT into [lib://Geo_AMS/Automation\file_operations\from_qlik/AIT_Finance.csv](txt);
+
+DROP Table Final_AIT;
+
+
+//---------------------------------------
+//--------   Computacenter AWB   --------
+//---------------------------------------
+
+[Computacenter_hawb_temp]:
+noconcatenate
+load distinct
+    sale_service_id,
+    buy_service_id
+resident [Total Report]
+WHERE Client='COMPUTACENTER' and MATCH(sale_status, '1. Pending Pickup', '2. In Transit');
+
+left join([Computacenter_hawb_temp])
+LOAD
+    sale_service_id,
+    sale_hawb
+resident sale_service_specific_data;
+
+
+[Computacenter_hawb]:
+noconcatenate
+load distinct
+    sale_service_id as SHO,
+    buy_service_id as SO,
+    sale_hawb as HAWB
+resident Computacenter_hawb_temp
+WHERE len(sale_hawb) > 0;
+
+DROP Table Computacenter_hawb_temp;
+
+Store Computacenter_hawb into [lib://Geo_AMS/Automation\file_operations\from_qlik/Computacenter_HAWB.csv](txt);
+
+DROP Table Computacenter_hawb;
+
+
+//----------------------------------
+//--------   Finance MCCG   --------
+//----------------------------------
+
+MCCG_not_invoiced_temp:
+NoConcatenate
+Load Distinct
+	buy_service_id,
+    sale_buy_id,
+    Client,
+    Carrier
+Resident [Total Report]
+Where Carrier='MCCOLLISTE';
+
+Left Join (MCCG_not_invoiced_temp)
+LOAD
+	sale_buy_id,
+	p2p_finance_analyst
+resident finance_owners;
+
+
+Left Join (MCCG_not_invoiced_temp)
+LOAD 
+	buy_service_id,
+	buy_invoice_follow_up
+resident ST;
+
+
+Drop Field sale_buy_id From MCCG_not_invoiced_temp;
+
+
+MCCG_not_invoiced:
+NoConcatenate
+Load Distinct
+*
+Resident MCCG_not_invoiced_temp
+Where buy_invoice_follow_up = '2. Not Invoiced';
+
+drop Table MCCG_not_invoiced_temp;
+
+Store MCCG_not_invoiced into [lib://Geo_AMS/Automation\file_operations\from_qlik/Finance/MCCG_not_invoiced.csv](txt);
+
+drop Table MCCG_not_invoiced;
+
+//-----------------------------------------------------------
+//--------   Vendor Management Purolator Tracking    --------
+//-----------------------------------------------------------
+
+Purolator_Tracking_temp:
+Noconcatenate
+Load Distinct
+    sale_service_id,
+    buy_service_id,
+    sale_buy_id,
+    sale_service_execution_followup,
+    Carrier,
+    ConsolidatedAWB,
+    hu_reference
+Resident [Total Report]
+WHERE MATCH(sale_service_execution_followup, 'CD', 'APP') and
+      MATCH(Carrier, 'GEODIS FF');
+
+left join(Purolator_Tracking_temp)
+load
+    sale_buy_id,
+    PU_Team_Responsible
+Resident Owners;
+
+Purolator_Tracking:
+NoConcatenate
+Load distinct
+    sale_service_id,
+    buy_service_id,
+    sale_service_execution_followup,
+    Carrier,
+    ConsolidatedAWB,
+    PU_Team_Responsible,
+    hu_reference
+
+Resident Purolator_Tracking_temp
+WHERE match(PU_Team_Responsible, 'Vendor Management');
+Drop Table Purolator_Tracking_temp;
+
+Store Purolator_Tracking into [lib://Geo_AMS/Automation\file_operations\from_qlik/VM_Purolator_Tracking.csv](txt);
+drop Table Purolator_Tracking;
+
+drop table [sale_basic];
+exit script;
+
+//---------------------------------------
+//--------   MX CA Sequencing    --------
+//---------------------------------------
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/55. sale_milestones.qvs]);
+drop table [sale_basic];
+MX_CA_sequencing_temp:
+NoConcatenate
+LOAD Distinct
+	sale_service_id,
+    hu_reference,
+    Client,
+    IsGNumber
+
+resident [Total Report]
+where sale_country2country = 'MX-CA'
+;
+
+left join(MX_CA_sequencing_temp)
+load
+    *
+resident Itinerary;
+
+MX_CA_sequencing:
+noconcatenate
+load distinct 
+    *,
+    if(sale_itineratyReference = 'A',if(sale_itineratyReference = 'A' and sale_itineratyMilestone = 'CHARGEMENT',1,0),'') as A_check,
+    if(sale_itineratyReference = 'B',if(sale_itineratyReference = 'B' and sale_itineratyMilestone = 'DOUANEEXP',1,0),'') as B_check,
+    if(sale_itineratyReference = 'C',if(sale_itineratyReference = 'C' and sale_itineratyMilestone = 'EMBARQUEME',1,0),'') as C_check,
+    if(sale_itineratyReference = 'D',if(sale_itineratyReference = 'D' and sale_itineratyMilestone = 'DEBARQUEME',1,0),'') as D_check,
+    if(sale_itineratyReference = 'E',if(sale_itineratyReference = 'E' and sale_itineratyMilestone = 'DOUANEIMP',1,0),'') as E_check,
+    if(sale_itineratyReference = 'F',if(sale_itineratyReference = 'F' and sale_itineratyMilestone = 'DECHARGEME',1,0),'') as F_check
+
+resident MX_CA_sequencing_temp;
+
+drop table MX_CA_sequencing_temp;
+
+Store [MX_CA_sequencing] into [lib://Geo_AMS/Automation\BI\Reports/MX_CA_sequencing.csv](txt);
+
+drop table MX_CA_sequencing;

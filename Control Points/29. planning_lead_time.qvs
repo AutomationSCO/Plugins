@@ -1,0 +1,49 @@
+[kpi_planning_lead_time_temp]:
+LEFT Keep ([sale_basic])
+LOAD Distinct
+
+    sale_service_id,
+    sale_creation_date,
+    sale_start_country,
+    sale_end_country
+
+resident sale_basic
+where not match(net_flag,1)
+and not match(sale_caribbean_flag,'Yes')
+and not match(sale_service_short_name,'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP')
+;
+
+left join(kpi_planning_lead_time_temp)
+load distinct
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+
+[buy_info]:
+left join(kpi_planning_lead_time_temp)
+LOAD Distinct
+
+    buy_service_id,
+    buy_creation_date
+
+resident buy_basic;
+
+
+[kpi_planning_lead_time]:
+noconcatenate
+load distinct
+    sale_service_id,
+    buy_creation_date - sale_creation_date as kpi_planning_lead_time_days,
+    if(buy_creation_date - sale_creation_date <= 0, '-1 Day','+1 Day') as kpi_planning_lead_time,
+    
+    if(sale_start_country = 'MX' and sale_end_country = 'CA',
+        if(NetWorkDays(sale_creation_date, buy_creation_date) > 5, 'Late', 'On Time'),
+            if(sale_start_country = 'MX' and sale_end_country = 'US',
+                if(NetWorkDays(sale_creation_date, buy_creation_date) > 3, 'Late', 'On Time'),
+                    if(NetWorkDays(sale_creation_date, buy_creation_date) > 2, 'Late', 'On Time'))) as kpi_planning_lead_time_aging
+
+resident kpi_planning_lead_time_temp;
+
+drop table kpi_planning_lead_time_temp;

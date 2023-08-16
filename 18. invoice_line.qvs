@@ -1,0 +1,73 @@
+invoice_line:
+left keep(sale_basic)
+LOAD
+    sale_service_id,
+    //sale_price_category_line,
+    sale_amount_line,
+    sale_currency_line,
+    //sale_is_invoiced_line,
+    //sale_O2C_Statut_line,
+    //sale_buyer_party_id_line,
+    //sale_seller_party_id_line,
+    //app_source_Sale_InvoiceLines_Service,
+    //sale_tarif_header_id_line,
+    //sale_invoice_status_line,
+    //sale_invoice_date_line,
+    sale_invoicelines_tarif_id,
+    sale_invoicelines_tarif_label//,sale_invoice_number as sale_invoice_number_invoice_line
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_InvoiceLines_Service.qvd]
+(qvd)
+where not wildmatch(sale_invoicelines_tarif_id,'002076-0-1-142-2','002076-0-2-172-*','002076-0-1-142-3','002744-0-66-34-1')
+
+;
+
+
+left join(invoice_line)
+Load  distinct
+    sale_service_id,
+    sum(sale_amount_line) as sale_total_amount_line
+
+
+resident invoice_line
+group by sale_service_id;
+
+
+
+
+cp_invoice_validation_temp:
+left keep(sale_basic)
+load distinct
+
+    sale_service_id
+
+resident sale_basic;
+
+left join(cp_invoice_validation_temp)
+Load  distinct
+    sale_service_id,
+    sum(sale_local_amount) as sale_local_amount
+
+
+resident sale_basic
+group by sale_service_id;
+
+
+left join(cp_invoice_validation_temp)
+load 
+    sale_service_id,
+    sale_total_amount_line
+
+resident invoice_line;
+
+cp_invoice_validation:
+NoConcatenate
+load distinct
+    sale_service_id,
+    round(sale_local_amount) - round(sale_total_amount_line) as cp_invoice_validation_amount,
+    if(match(round(sale_local_amount) - round(sale_total_amount_line),1,0),'Correct','Incorrect') as cp_invoice_validation
+
+resident cp_invoice_validation_temp;
+
+drop table cp_invoice_validation_temp;
+

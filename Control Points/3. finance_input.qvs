@@ -1,0 +1,20 @@
+
+
+[Finance_planning_input]:
+left keep(sale_basic)
+LOAD distinct
+    sale_service_id,
+    Accesorial_Group as sale_accesorial_group,
+    Accesorial_Nature as sale_accesorial_nature//,Acc_euro
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/App_Connexion/Finance_Planning_laJulia2.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+
+MOT:
+left keep(sale_basic)
+Load distinct
+    sale_service_id,
+    Mode as sale_mode,
+    Sub_mode as sale_sub_mode
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/App_Connexion/Sub_mode_mike.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);

@@ -1,0 +1,79 @@
+cp_wheels_down_temp:
+left keep(sale_basic)
+load distinct
+
+sale_service_id
+
+resident sale_basic
+where not match(sale_service_short_name,'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP')
+and GEODIS_ops_Team = 'Inter Team'
+and sale_end_geo = 'AMS'
+and not match(net_flag,1)
+and sale_creation_year >= 2022
+//and not match(sale_contractor_party_Group_N1,'ALIGN')
+;
+
+[Wheels_Down_CP]:
+left join(cp_wheels_down_temp)
+load distinct
+    sale_service_id,
+    date(floor(sale_LastEvent_actual_datetime)) as Wheels_Down_Date,
+    sale_LastEvent_user_creation as "Wheels Down Created By"
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_LastBE.qvd] (qvd)
+where match(sale_LastEvent_code,'A');
+
+
+CP_Netting_WD:
+left join(cp_wheels_down_temp)
+LOAD
+    CSO as sale_service_id,
+    'Yes' as CP_WD_Net
+    
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'WD';
+
+
+
+// left join(cp_wheels_down_temp)
+// Load
+//     cso_number,
+//     ATA,
+//     Wheels_Down_CP_flag
+
+// resident [Booking_Details];
+
+left join(cp_wheels_down_temp)
+load 
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(cp_wheels_down_temp)
+load 
+    buy_service_id,
+    buy_executor_party_group_n1
+
+resident buy_basic;
+
+cp_wheels_down:
+noconcatenate
+Load distinct
+
+    sale_service_id,
+    if(CP_WD_Net = 'Yes','Correct','Incorrect') as cp_wheels_down,
+    Wheels_Down_Date,
+    "Wheels Down Created By"
+
+resident cp_wheels_down_temp
+where not match(buy_executor_party_group_n1,'MILL_CREEK','INNOVATIVO')
+
+//not match(CP_WD_Net,'Yes')
+//and Wheels_Down_Date <> ATA
+//and len(trim(Wheels_Down_Date)) = 0
+;
+
+
+drop table cp_wheels_down_temp;

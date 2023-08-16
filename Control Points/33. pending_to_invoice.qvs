@@ -1,0 +1,43 @@
+pending_to_invoice_temp:
+left keep(full_FA)
+load 
+    sale_full_invoice_ax_key,
+    sale_full_invoice_number
+
+resident full_FA
+where not match(sale_full_invoicing_type,'Partial Credit Note','Full Credit Note','CREDIT_NOTE')
+;
+
+left join(pending_to_invoice_temp)
+load
+    sale_full_invoice_number,
+    sale_service_id
+resident sale_invoice;
+
+left join(pending_to_invoice_temp)
+load
+    sale_service_id,
+    sale_executor_short_name
+resident sale_basic;
+
+
+left join(pending_to_invoice_temp)
+load 
+    sale_full_invoice_ax_key,
+    1 as flag
+resident db_credit;
+
+
+pending_to_invoice:
+noconcatenate
+load 
+    sale_full_invoice_ax_key,
+    'Incorrect' as cp_pending_to_invoice
+
+resident pending_to_invoice_temp
+where len(flag) = 0
+and not match(sale_executor_short_name,'SBRKEY','SCLKEY','SCOKEY','SPEKEY');
+
+drop table pending_to_invoice_temp;
+
+

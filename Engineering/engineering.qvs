@@ -1,0 +1,89 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Engineering/0.1 Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Engineering/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/19. eorder_shipment.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/26. sale_finance_tariff_items.qvs]);
+
+service_description_temp:
+noconcatenate
+LOAD
+sale_service_id,
+hu_reference,
+sale_status,
+sale_start_country,
+sale_end_country
+
+resident sale_basic;
+
+left join(service_description_temp)
+load
+hu_reference,
+eorder_shipment_service_portal,
+eorder_shipment_status_id
+
+resident Eorder_Shipment;
+
+
+service_description:
+noconcatenate
+LOAD
+sale_service_id,
+if( ((left(hu_reference,3)= 'GAA') and (sale_status = '3. Delivered') and (eorder_shipment_service_portal ='CI_Only')) or 
+		((left(hu_reference,3)= 'GAA') and (eorder_shipment_service_portal ='CI_Only') and (eorder_shipment_status_id= 'CI Signed') ) or 
+		((left(hu_reference,3)= 'GAA') and (eorder_shipment_service_portal ='CI_Only') and (eorder_shipment_status_id= 'EXECUTION') ) or
+		((left(hu_reference,3)= 'GAA') and (eorder_shipment_service_portal ='CI_Only') and (eorder_shipment_status_id= 'Document Creation'))
+		,'Commercial Invoice Only',
+		//  above to describe orders in Eorder category CFT
+
+	if( ((left(hu_reference,3)= 'GAA') and (sale_status = '3. Delivered') and (eorder_shipment_service_portal ='Scrap')) OR 
+    	((left(hu_reference,3)= 'GAA') and (sale_status = '3. Delivered') and (eorder_shipment_service_portal ='Reverse')),'Scrap Including Transport',
+ 	    //  above to describe orders in Eorder category Scrap
+    
+	if( (left(hu_reference,3)= 'GAA') 
+		and (sale_status = '3. Delivered') 
+		and (sale_start_country <> sale_end_country) 
+		and (wildmatch(eorder_shipment_service_portal ,'Transportation','Transportation_Relocation', 'Transportation_and_Relocation',
+          'NCS_Transportation', 'Warehouse','International_Freight_and_CI','Domestic_Transport_and_Relocation', 'Data_Center_Relo', '-', '')), 'International Transport',             
+     	//  above to describe orders in Eorder category Int Freight
+     
+   if ( 
+   //1
+   ( (left(hu_reference,3)= 'GAA') and (sale_status = '3. Delivered') and (sale_start_country = sale_end_country) and
+          (wildmatch(eorder_shipment_service_portal ,'Transportation','Transportation_Relocation', 'Transportation_and_Relocation',
+			'NCS_Transportation', 'Warehouse','International_Freight_and_CI','Domestic_Transport_and_Relocation', 'Data_Center_Relo', '-', '')) ) OR
+   //2
+   ( (left(hu_reference,3)= 'GAA') and (sale_status = '3. Delivered') and (eorder_shipment_service_portal ='NCS_Transportation') ) OR
+   
+   //3
+   ( (left(hu_reference,3)= 'GAA') and (sale_status = '3. Delivered') and (eorder_shipment_service_portal ='Warehouse') ) , 'Domestic Transport & Relocation',
+    
+ if(
+ //4
+   ( (sale_start_country = sale_end_country) and (sale_start_country= 'US') and (sale_status = '3. Delivered') and (isnull(eorder_shipment_service_portal)) ) OR
+   
+   //5
+   ( (sale_start_country = sale_end_country) and (sale_start_country= 'IN') and (sale_status = '3. Delivered') and (isnull(eorder_shipment_service_portal)) ), 'Domestic Transport & Relocation',
+   
+        // ALL above to describe orders Domestic
+ 
+    if (
+    
+   ( (left(hu_reference,3)= 'GAA') and ( [eorder_shipment_status_id] = 'EXECUTION') and (isnull(sale_status)) AND ((eorder_shipment_service_portal  <> 'Storage') OR (eorder_shipment_service_portal  <> 'International_Reporting')) )OR 
+   ( (left(hu_reference,3)= 'GAA') and ( [eorder_shipment_status_id] = 'CI Signed') and (isnull(sale_status)) AND ((eorder_shipment_service_portal  <> 'Storage') OR (eorder_shipment_service_portal  <> 'International_Reporting')) ), 'Other/LLP',
+
+   IF(
+	((left(hu_reference,3)= 'GAA') and (eorder_shipment_service_portal ='Storage') and (sale_status = '3. Delivered')), 'Storage Including Transport',
+	IF(
+		((left(hu_reference,3)= 'GAA') and (eorder_shipment_service_portal ='Resale') and (sale_status = '3. Delivered')), 'Resale Including Transport',
+
+ 
+            
+          'NOT OK')))))))) as sale_service_description  
+
+
+
+RESIDENT service_description_temp;
+
+drop table service_description_temp;
+exit script;

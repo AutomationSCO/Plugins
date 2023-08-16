@@ -1,0 +1,501 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0.1 Main geo_bi.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+
+
+buy_basic_temp:
+noconcatenate
+load
+    *
+resident buy_basic
+where Carrier = 'FEDEX';
+
+drop table buy_basic;
+
+rename table buy_basic_temp to buy_basic;
+
+
+[sale-buy_temp]:
+left Keep (buy_basic)
+ LOAD
+    *    
+
+resident [sale-buy];
+
+Drop table [sale-buy];
+
+sale_basic_temp:
+left Keep([sale-buy_temp])
+LOAD
+    *  
+RESIDENT [sale_basic];
+
+concatenate(sale_basic_temp)
+load
+    *
+resident sale_basic 
+where match(sale_service_short_name,'IBMMAFDXGSP/US','IBMMAFDXGSP/CA');
+
+Drop Table  [sale_basic];
+
+Rename Table sale_basic_temp to sale_basic;
+Rename Table [sale-buy_temp] to [sale-buy];
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Owners.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/2. ibm_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/15. Sale_FirstBE.qvs]);
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/7. timeliness_completeness.qvs]);
+
+db_fedex:
+left keep(sale_basic)
+LOAD
+    //buy_service_id,
+    sale_service_id,
+    HAWB as db_fedex_awb,
+    MAWB as db_fedex_mawb,
+    Number_of_Packages as db_fedex_number_of_packages,
+    Origin_city as db_fedex_origin_city,
+    Origin_country as db_fedex_origin_country,
+    Origin_state as db_fedex_state,
+    Destination_city as db_fedex_destination_city,
+    Destination_country as db_fedex_destination_country,
+    Destination_state as db_fedex_destination_state,
+    Weight as db_fedex_weight,
+    Lenght as db_fedex_lenght,
+    Width as db_fedex_width,
+    Height as db_fedex_height,
+    Last_Modified as db_fedex_last_modified,
+    Last_Event as db_fedex_last_event,
+    Last_Event_Date as db_fedex_last_event_date
+
+    
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/FEDEX/FEDEX_Tracking.xlsx]
+(ooxml, embedded labels, table is Orders);
+
+db_fedex_milestones:
+left keep(db_fedex)
+LOAD
+    AWB as db_fedex_awb,
+    "Date" as db_fedex_milestone_date,
+    Description as db_fedex_milestone,
+    Country as db_fedex_milestone_country,
+    City as db_fedex_milestone_city,
+    State as db_fedex_milestone_state,
+    Postal_Code as db_fedex_milestone_zip_code,
+    Exception_Description  as db_fedex_milestone_exception_description
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/FEDEX/FEDEX_Tracking.xlsx]
+(ooxml, embedded labels, table is Itinerary);
+
+[FDX_claims]:
+left keep(db_fedex)
+LOAD
+  
+    //FX_MAWB,
+    FX_AWB as db_fedex_awb,
+    //Status,
+    //Status_Date,
+    "C-Number" as db_fedex_claim_C_Number,
+    FX_Comments as db_fedex_claim_Comments
+    //Aging
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/FEDEX/FEDEX_claim_status.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+// BSO----------------------------------------------------------------------------------
+
+
+BSO_temp:
+noconcatenate
+load 
+	db_fedex_awb,
+	db_fedex_milestone_date as bso_delay_date
+    
+resident db_fedex_milestones
+where wildmatch(db_fedex_milestone_exception_description,'Paperwork available for non-FedEx broker','Unknown status: Non-FedEx broker.')
+;
+
+left join(BSO_temp)
+load Distinct
+	db_fedex_awb,
+    min(date(bso_delay_date)) as bso_first_reason_code_date
+
+resident BSO_temp
+group by db_fedex_awb;
+
+BSO:
+noconcatenate
+LOAD
+    db_fedex_awb,
+    bso_delay_date,
+    bso_first_reason_code_date,
+    if(date(bso_first_reason_code_date) - '$(vToday)' >= -1, 'Green',
+        if(date(bso_first_reason_code_date)  - '$(vToday)' >= -4, 'Yellow',
+            if(date(bso_first_reason_code_date) - '$(vToday)' <= -4, 'Red'))) as bso_fdx_bracket
+
+
+resident BSO_temp;
+
+drop table BSO_temp;
+
+
+//-------------------------------------------------------------------------------------------------------------------------
+
+FDX_KIs_Santi_temp:
+noconcatenate
+LOAD
+    MFT# as manifiesto,
+    [AWB#]
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/BSO/E12193O1.CSV]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where match(DDES,'FG','FM','FF')
+and SSTI = 71
+//and year(MFDT) = '$(vCurrentYear)' Moni 2-1-23
+;
+
+
+left join(FDX_KIs_Santi_temp)
+load
+    sale_service_id,
+    hu_reference,
+    Right(hu_reference,7) as manifiesto
+resident sale_basic;
+
+left join(FDX_KIs_Santi_temp)
+
+left join(FDX_KIs_Santi_temp)
+load 
+    sale_service_id,
+    sale_hawb
+resident sale_service_specific_data;
+
+left join(FDX_KIs_Santi_temp)
+Load  distinct
+    sale_service_id,
+    buy_service_id
+resident [sale-buy];
+
+
+
+FDX_KIs_Santi:
+noconcatenate
+load
+    manifiesto,
+    buy_service_id,
+    if(len(sale_hawb) = 0,[AWB#],sale_hawb) as ConsolidatedAWB,
+    hu_reference
+
+resident FDX_KIs_Santi_temp;
+
+drop table FDX_KIs_Santi_temp;
+
+
+Store [FDX_KIs_Santi] into [lib://Geo_AMS/Automation\file_operations\from_qlik/Fedex/Fedex_KIs.csv](txt);
+
+drop table FDX_KIs_Santi;
+
+
+KIs_email:
+noconcatenate
+LOAD distinct 
+    //CAS#,
+    //PLT#,
+    //CARDDESC,
+    //MSDESC,
+    //MTDESC,
+    //ROUT,
+    //GWGTK,
+    //LWGTK,
+    //NWGTK,
+    //LTHCM,
+    //WTHCM,
+    //HTHCM,
+    //CUFTCM,
+    CNAME,
+    //CTYCODE,
+    //SHP2CTY#,
+    //SHP2LOC#,
+    //STC,
+    DDBAREA,
+    //PSDT,
+    //POSTDATE,
+    //POSTTIME,
+    //VALIDDATE,
+    //VALIDTIME,
+    //LINEQTY,
+    //CASEVALUE,
+    //EMRGDESC,
+    //ATTNDESC,
+    //CNINDESC,
+    //NCHGDESC,
+    //SECDESC,
+    //FNOCDESC,
+    //PPAYDESC,
+    //RAINDESC,
+    //RALB,
+    //LICI,
+    //RLIN,
+    //ORD#,
+    //FRD1,
+    //FRT1,
+    //FRD2,
+    //FRT2,
+    //LOC2,
+    //DMTDESC,
+    INV#,
+    //IVDT,
+    //"INF$",
+    //RLDT,
+    MFT#,
+    MFDT,
+    //FBDT,
+    DPDT,
+    //DPTM,
+    //ARDT,
+    AWB#,
+    //CAR#,
+    //FLVS,
+    //UPRT,
+    //DEST,
+    CONT,
+    //VOY#,
+    //MESDESC,
+    SSTI,
+    //SSDT,
+    //ILIC,
+    //RMRK,
+    //LC#,
+    //CSOFDESC,
+    //XPTR,
+    //CRRC,
+    PODS,
+    //DMFT,
+    //DCAR,
+    //DAWB,
+    //DFLT,
+    //DMDT,
+    //DBDT,
+    //FDES,
+    DDES,
+    //MTYP,
+    //STAT,
+    CARN
+    //HELDDESC,
+    //CPI#DESC,
+    //FDTM,
+    //CONS,
+    //DPUD,
+    //DPUT,
+    //IPUD,
+    //IPUT,
+    //ARTM,
+    //SSTIDESC
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/BSO/E12193O1.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where not match(DDES,'FG', 'FF', 'FM','FL','DP','UP')
+//and year(MFDT) = '$(vCurrentYear)'
+and match(SSTI,'71')
+and not match(CNAME,'MEXICO','JAPAN','SRILAN','ARGENT', 'CHILE', 'BRAZIL', 'URUGUA', 'BOLIVI', 'PARAGU', 'VENEZU', 'COLOMB','ECUADO','PERU')
+
+or 
+
+match(CNAME,'MEXICO')
+and FDES = 'GDL'
+and match(SSTI,'71')
+and not match(DDES,'FG', 'FF', 'FM','FL','DP','UP')
+//and year(MFDT) = '$(vCurrentYear)'
+
+
+;
+
+
+Store [KIs_email] into [lib://Geo_AMS/Automation/BI/Reports/KIs_email.csv](txt);
+
+drop table KIs_email;
+
+
+
+
+
+exit script;
+
+
+
+
+
+left join(FDX_Automation)
+LOAD
+    cso_number,
+    "Master tracking number",
+    "Tracking Number" as FDX_AWB,
+    "General Status",
+    "Delivery date",
+    "Delivery hour",
+    "Signed By",
+    "Origin city",
+    "Origin state",
+    "Origin country",
+    "Destination city",
+    "Destination state",
+    "Destination country",
+    "Reason Code" as Status,
+    "Quantity of Pieces",
+    "Picked up Date",
+    "Picked up Location",
+    "Arrived Date",
+    "Arrived Location",
+    "Import Date",
+    "Import Location",
+    "Delivered Date",
+    "Reason Code Date",
+    "Delivered Location",
+    "Tracking Number" & "Reason Code" as ID,
+    "Master tracking number" as FDX_MAWB
+
+
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/FEDEX/FEDEX_current_status.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+
+//exit script;
+left join(FDX_Automation)
+load 
+
+    Today,
+    "HAWB" & "Reason Code" as ID,
+    "Reason Code" as fdx_historical_reason_code
+
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/FEDEX/FEDEX_historical.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+//exit script;
+left join(FDX_Automation)
+load
+    ID,
+    count(Today) as ID_count
+
+resident [FDX_Automation]
+group by ID;
+
+
+[Automation]:
+noconcatenate
+load
+    cso_number,
+    ID_count,
+    [General Status],
+    ID,
+    fdx_historical_reason_code,
+    FDX_AWB,
+    FDX_MAWB
+
+resident FDX_Automation;
+
+
+[FDX_claims]:
+left keep(Automation)
+LOAD
+  
+    //FX_MAWB,
+    FX_AWB as FDX_AWB,
+    //Status,
+    //Status_Date,
+    "C-Number" as C_Number,
+    FX_Comments as FX_Comments_sso
+    //Aging
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/FEDEX/FEDEX_claim_status.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+//-------------------------------------------------------------------------------------------------------
+
+FDX_email_temp:
+noconcatenate
+load distinct
+    sso_number as SSO,
+    ConsolidatedAWB as FX_MAWB
+
+resident [Total Report]
+where match([CSO Follow Up Status],'APP','CD');
+
+left join(FDX_email_temp)
+load distinct
+    FDX_AWB as FX_MAWB,
+    C_Number as [C-Number],
+    'Open C-Number' as Status,
+    today() as Status_Date
+
+resident FDX_claims;
+
+
+
+FDX_email_temp_temp:
+//concatenate(FDX_email_temp)
+load
+    cso_sso_number as SSO,
+    FDX_MAWB as FX_MAWB,
+    FDX_AWB,
+    Status,
+    [Reason Code Date] as Status_Date,
+    '' as [C-Number],
+    '' as FX_Comments,
+    ID_count as Aging
+
+resident FDX_Automation
+where not match([General Status],'DELIVERED');
+
+left join(FDX_email_temp_temp)
+load 
+    FX_MAWB,
+    'Check' as flag
+
+resident FDX_email_temp;
+
+concatenate(FDX_email_temp)
+load distinct
+    *
+
+resident FDX_email_temp_temp
+//where len(trim(flag)) = 0
+;
+
+
+FDX_email:
+noconcatenate
+load distinct
+    FX_MAWB,
+    SSO,
+    FDX_AWB as FX_AWB,
+    [C-Number],
+    Status,
+    date(left(Status_Date,10)) as Status_Date,
+    FX_Comments
+
+
+resident FDX_email_temp
+where not match(Status,'Delivered',
+'NO EXIST WHEN THE RPA RAN','Delivered:  Damaged, delivery completed','In transit:  Paperwork available for non-FedEx broker','No record','Delivered Package delivered to recipient address - release authorized')
+and Aging >= 2
+or 
+
+Status = 'Open C-Number' 
+;
+
+
+drop table FDX_email_temp;
+Store [FDX_email] into [lib://Geo_AMS/LogisticsAnalyst/Plugins/Reports/FDX_email.csv](txt);
+
+drop table FDX_Automation;
+drop table FDX_email_temp_temp;
+//drop field ConsolidatedAWB from FDX_claims;
+
+
+
+
+
+
+
+
+

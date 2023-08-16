@@ -1,0 +1,39 @@
+buy_tariff_items:
+LEFT KEEP (buy_basic)
+LOAD DISTINCT
+    buy_service_id,
+    buy_tarif_label AS buy_tariff_item,
+	buy_unit_price as buy_tariff_unit_price,
+	buy_unit_price_forced as buy_tariff_unit_price_forced,
+    buy_indicator_wording AS buy_tariff_indicator_wording,
+    buy_amount AS buy_tariff_amount,
+    buy_currency AS buy_tariff_currency,
+    buy_invoiced_quantity AS buy_tariff_invoiced_quantity,
+    buy_realized_quantity AS buy_tariff_real_quantity,
+    buy_invoicing_profile_id AS buy_tariff_invoicing_profile,
+        if(wildmatch(buy_tarif_label,'*FSC*','*FUEL*'),'FSC',
+	    if(wildmatch(buy_tarif_label,'*AD HOC*','*ADHOC*','*COVID*'),'ADHOC',
+    	    if(wildmatch(buy_tarif_label,'*SSC*','*SECURITY*'),'SECURITY SURCHARGE',
+        	    if(wildmatch(buy_tarif_label,'*FREIGHT*','*HWA*','*LINEHAUL*','2000 MILE*','TRUCK MILE*','*TRUCKLOAD*'),'FREIGHT',
+            	    if(wildmatch(buy_tarif_label,'*HAZMAT*', '*MAGNET*','*LITHI*'),'HAZMAT',
+                	    if(wildmatch(buy_tarif_label,'*INSIDE DELIVERY*'),'INSIDE DELIVERY',
+                    	    if(wildmatch(buy_tarif_label,'*INSIDE PICK*','INSIDE PICK-UP'),'INSIDE PICKUP',
+                        	    if(wildmatch(buy_tarif_label,'*SPECIFIC TIME*','*APPOINTMENT*'),'APPOINTMENT',
+                            	    if(wildmatch(buy_tarif_label,'*LABOR*'),'LABOR',
+                                	    if(wildmatch(buy_tarif_label,'*SELF PAY*','*SELF PAID*'),'SELF PAY',
+                                    	    if(wildmatch(buy_tarif_label,'*ALREADY PAID*','*ALREADY PAY*'),'ALREADY PAY',
+                                        	    if(wildmatch(buy_tarif_label,'*PADDED*'),'PADDED VAN',
+                                            	    if(wildmatch(buy_tarif_label,'*SHRINK*','BUBBLE*'),'SHRINK WRAPPED',
+                                            		    if(wildmatch(buy_tarif_label,'*CARTON*','*CARTONS*'),'CARTON BOX',                                                		
+                                                    		if(wildmatch(buy_tarif_label,'*SCREENING*'),'SCREENING FEES',
+                                                        		if(wildmatch(buy_tarif_label,'*PALLET*'),'PALLETIZE',
+																	if(wildmatch(buy_tarif_label,'*PACKING*'),'PACKING & UNPACKING',
+																		if(wildmatch(buy_tarif_label,'*handling*','*Handling*','*HANDLING*'),'HANDLING',
+																			if(wildmatch(buy_tarif_label,'*BEYOND*','*Beyond*'),'BEYOND POINT',
+																				if(wildmatch(buy_tarif_label,'*ATTEMPTED*','*Attempted*'),'ATTEMPTED',
+                                                        	
+'Other')))))))))))))))))))) as buy_tariff_item_consolidated,
+
+    if(wildmatch(buy_tarif_label,'*FREIGHT*'),'FREIGHT',
+        if(wildmatch(buy_tarif_label,'*FSC*','*FUEL*'),'FSC', 'ACCESORIAL')) as buy_tariff_item_group
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_Finance_facts.qvd] (qvd);

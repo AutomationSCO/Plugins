@@ -1,0 +1,8 @@
+let vDateBracke = date(addmonths('$(vToday)',-24),'DD/MM/YY');
+set vContractorZenith = 'No','ALIGN';
+set vContractorMpo = 'SCO_AMS_ALIGN','No';
+set vContractorNAP = 'No','No';
+set vLane = 'Inter Team','Intra Team';
+set vGeo2Geo = 'No','No';
+set vAgency = 'No','No';
+set vStatus = 'CL','FINISHED','CD','APP','STARTED','PLANNED';

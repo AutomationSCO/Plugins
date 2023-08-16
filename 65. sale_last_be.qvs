@@ -1,0 +1,33 @@
+sale_last_be:
+Left Keep(sale_basic)
+LOAD
+    //sale_service_system_id,
+    sale_service_id,
+    sale_LastEvent_code as sale_lastbe_event_code,
+    sale_LastEvent_reason_code as sale_lastbe_reason_code,
+    sale_LastEvent_creation_datetime as sale_lastbe_creation_datetime,
+    date(sale_LastEvent_creation_datetime) as sale_lastbe_creation_date,
+    //sale_LastEvent_creation_timezone,
+    //sale_LastEvent_creation_datetime_utc as sale_lastbe_,
+    sale_LastEvent_update_datetime as sale_lastbe_update_datetime,
+    sale_LastEvent_estimated_datetime as sale_lastbe_estimated_datetime,
+    //sale_LastEvent_estimated_timezone,
+    //sale_LastEvent_estimated_datetime_utc,
+    sale_LastEvent_actual_datetime as sale_lastbe_actual_datetime,
+    //sale_LastEvent_actual_timezone,
+    //sale_LastEvent_actual_datetime_utc,
+    //sale_LastEvent_country_zone_location,
+    sale_LastEvent_user_creation as sale_lastbe_user_creation,
+    sale_LastEvent_user_update as sale_lastbe_user_update,
+    sale_LastEvent_comments as sale_lastbe_comments,
+    //sale_LastEvent_record_date,
+    //sale_LastEvent_expected,
+    //sale_LastEvent_app_source,
+    sale_LastEvent_creation_user_id as sale_lastbe_creation_user_id,
+    sale_LastEvent_update_user_id as sale_lastbe_update_user_id ,
+    sale_LastEvent_status as sale_lastbe_status,
+    if(date#(sale_LastEvent_actual_datetime,'DD/MM/YYYY') >= date#(sale_LastEvent_creation_datetime,'DD/MM/YYYY') ,
+    'Correct','Incorrect') as sale_lastbe_timeliness
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_LastBE.qvd]
+(qvd);

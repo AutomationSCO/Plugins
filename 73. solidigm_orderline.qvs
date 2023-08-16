@@ -1,0 +1,18 @@
+solidigm_orderline:
+left keep(Eorder_OrderLine)
+LOAD
+//    SOLIDIGM_COL_app_source,
+//    SOLIDIGM_COL_record_date,
+    SOLIDIGM_COL_systemid as eorder_ordeline_systemid,
+    SOLIDIGM_COL_OrderLine_warehouse_orderline_confirmation,
+    SOLIDIGM_COL_OrderLine_warehouse_orderline_rejection_reason,
+    SOLIDIGM_COL_OrderLine_ConfirmedQuantity,
+    SOLIDIGM_COL_OrderLine_GlobalDocumentReferenceTypeCode,
+    SOLIDIGM_COL_OrderLine_PO_Number,
+    SOLIDIGM_COL_OrderLine_LotIdentifier,
+    SOLIDIGM_COL_OrderLine_UnitPrice,
+    SOLIDIGM_COL_OrderLine_serialNumberList,
+    SOLIDIGM_COL_OrderLine_EndUserPartNumber,
+    SOLIDIGM_COL_OrderLine_CoOList
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_COL_SOLIDIGM.qvd]
+(qvd);

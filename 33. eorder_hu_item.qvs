@@ -1,0 +1,44 @@
+eorder_hu_item:
+left keep(Eorder_HU_Compum)
+Load 
+
+    //sale_service_id as hu_reference,
+    sale_item_description as eorder_hu_item_description,
+    sale_HU_compum_internal_id as eorder_hu_compum_internal_id
+
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_sale_HU_compum_item.qvd]
+(qvd);
+
+[eorder_hu_items_qty]:
+left keep(eorder_hu_item)
+Load
+    eorder_hu_compum_internal_id,
+    count(eorder_hu_compum_internal_id) as eorder_hu_item_qty
+
+resident eorder_hu_item group by eorder_hu_compum_internal_id;
+
+
+eorder_unit_concat_temp:
+left keep(eorder_hu_item)
+Load
+    eorder_hu_compum_internal_id,
+    eorder_hu_item_description
+
+resident eorder_hu_item;
+
+left join(eorder_unit_concat_temp)
+load
+    eorder_hu_compum_internal_id,
+    hu_reference
+resident Eorder_HU_Compum;
+
+
+eorder_unit_concat:
+left keep(eorder_unit_concat_temp)
+load
+    hu_reference,
+    concat(eorder_hu_item_description,', ') as eorder_hu_item_description_concat
+
+resident eorder_unit_concat_temp group by hu_reference;
+
+drop table eorder_unit_concat_temp;

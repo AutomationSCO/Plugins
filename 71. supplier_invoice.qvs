@@ -1,0 +1,67 @@
+buy_supplier_invoice:
+left keep(full_ST)
+LOAD
+//    app_source_buy_supplier_invoice_facts,
+//    invoice_matching_number,
+    buy_invoice_systemid,
+    supplier_invoice_systemid
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_buy_supplier_invoice_facts.qvd]
+(qvd);
+
+
+supplier_invoice:
+left keep(buy_supplier_invoice)
+LOAD
+    app_source_Supplier_Invoice,
+    supplier_invoice_number,
+    supplier_invoice_external_number,
+    supplier_invoice_creation_date,
+//     supplier_invoice_amount_et,
+//     supplier_invoice_amount_ati,
+//     supplier_invoice_currency,
+//     supplier_invoice_status_code,
+//     supplier_invoice_status_wording,
+//     supplier_invoice_date,
+//     supplier_invoice_buyer_party_id,
+//     supplier_invoice_seller_party_id,
+//     supplier_invoice_buyer_name,
+//     supplier_invoice_buyer_gsn,
+//     supplier_invoice_seller_name,
+//     supplier_invoice_seller_gsn,
+//     supplier_invoice_type,
+//     supplier_invoice_nature,
+//     supplier_invoice_matching_top,
+//     supplier_invoice_matching_type_code,
+//     supplier_invoice_matching_type_wording,
+//     supplier_invoice_matching_number,
+//     supplier_invoice_amount_rest_to_matched,
+//     supplier_payment_agreement_code,
+//     supplier_payment_agreement_wording,
+//     supplier_invoice_due_date,
+//     supplier_invoice_payment_methode_code,
+//     supplier_invoice_payment_methode_wording,
+//     supplier_invoice_reception_date,
+//     supplier_invoice_accounting_date,
+//     supplier_invoice_booking_number,
+//     supplier_invoice_service_start_date,
+//     supplier_invoice_service_end_date,
+//     supplier_invoice_internal_purchase_order,
+//     supplier_invoice_external_purchase_order,
+//     supplier_invoice_tax_engine,
+//     supplier_invoice_gwoi_flag,
+//     supplier_invoice_local_currency,
+//     supplier_invoice_local_currency_exchange_rate,
+//     supplier_invoice_currency_conversion_table_name,    
+//     supplier_invoice_soldee,
+//     supplier_invoice_amount_ytdeur_rate,
+//     supplier_invoice_amount_budgeteur_rate,
+//     supplier_invoice_amount_et_ytdeur,
+//     supplier_invoice_amount_et_budgeteur,
+//     supplier_invoice_amount_ati_ytdeur,
+//     supplier_invoice_amount_ati_budgeteur,
+//     supplier_invoice_comment,
+//     supplier_invoice_blocking_code,
+//     supplier_invoice_rest_to_match
+	supplier_invoice_systemid
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Supplier_Invoice.qvd]
+(qvd);

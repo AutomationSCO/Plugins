@@ -1,0 +1,111 @@
+Section application;
+//Scope Info-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+[sale_basic_temp_1]: 
+noconcatenate
+LOAD Distinct
+    $(vZenith)
+
+FROM [lib://SCO-BI-Common Shared Data  Transormed/Geoflow_Sale_Service_Transformed.qvd] (qvd)
+WHERE 
+
+    (APP_Source = 'Zenith'
+    AND sale_creation_date >='$(vDateBracke)'  //or MATCH([sale_service_execution_followup], 'APP','CD')
+    //and not match(sale_start_country&sale_end_country,'BRBR','ECEC','COCO','ARAR','USAR','USBR','USCO','USCL','USEC','USUY','USVE','USLK','USPE')
+    AND not match(sale_start_country&sale_end_country&[sale_contractor_party_Group_N1],'USJPIBM_FIGO')
+    AND Match([sale_contractor_party_Group_N1],$(vContractorZenith))
+    and not match(sale_start_city,'SAN PEDRO GARZA GARCÍA')
+    AND Match([sale_service_status],'ACT','ATT','BRO')
+    AND MATCH([sale_service_execution_followup], 'APP','CD','CL')
+    and (Len(Trim(sale_service_status)) >= 1)
+    and (Len(Trim(sale_service_id)) >= 3)
+    and not match(sale_start_country&sale_end_country,'BRBR','COCO')
+    //and not match(sale_service_nature,'LOW')
+    
+    //AND NOT WildMatch(sale_service_short_name,'HSBC_AR/TRS',//'IBM_MD_AR/EIC','IBM_MD_CA/DEJARD',
+    //    'IBM_MD_MX/WHI MX','IBM_MD_MX/SHP MX','IBM_MD_MX/VMI MX','IBMGONTORGSP/USD','IBMMDUS/GSPMGFE','IBMMDUS/GSPMGFEE','IBM_MD_BR/ICT',
+    //    'SOFT_MD_MX/ICTCB','SOFT_CA/UPS_CAD','THALES_US/WHS','IBMMABROK/US','IBMMAGFFBROK/US', '*IBMMAGFFBROK*','IBM_MD_CA-WH','IBM_MD_SG_MS_TRS',
+    //    'IBM_MD_US/SHP','IBM_MD_CA/EXPFEE','IBMMDCA/GSPMGFEE','IBMMDCA/GSPMGFE','IBM_MD_US/SHP','IBM_MD_US/WHS','METHODOLOGYUS/TR','THALES*','IBMMD/SHP-IOTUSD',
+    //    'SOFTMX/GONTORMXN','IBMGONTORHW/MXN','IBMGONTOR3RO/MXN','SOFTMX/GONTORUSD','IBMGONTORHW/USD','ALIGN_FEES','KSM MGT FEE MX','KSM_MANAGE-FEE','ALIGN FEES','KSM_US/WHS','QRS_US/TR','GEO-INTER_FR/TR',
+    //    'KSM_IMMEX','KSM_BROKERAGE','SOFT_US/GFF_USD','IBMMAFDXGSP/US','IBMMAFDXGSP/CA','MERATIVE_US/NCS')
+    
+    AND NOT WildMatch(Party_Short_Name_sale_contractor_party,'IBM_NL','ATRA_SF_US','BLOOMBRGUS','IBM_MX',
+        'SMXKEY','SUSKEY','IBM_US','CLEANBEDUS','EACCESS_US','LARC_US','BESTBUYLMS','ROCKWELLUS','SNLKEY','TRANSAMSUS','PARTY*','MYPARCELUS')
+    
+    )
+or
+
+MATCH([sale_service_execution_followup], 'NAP')
+AND Match([sale_contractor_party_Group_N1],$(vContractorNAP))
+AND sale_creation_date >='$(vDateBracke)';
+
+
+//exit script;
+[MPO_temp]:
+noconcatenate
+LOAD Distinct
+
+    $(vMPO)
+    
+FROM [lib://SCO-BI-Common Shared Data  Transormed/Geoflow_Sale_Service_Transformed.qvd] (qvd)
+where APP_Source = 'MPO'
+and match(sale_contractor_party_Group_N2,$(vContractorMpo))
+and not match(sale_service_status,'SHIPMENT CANCELED')
+AND sale_creation_date >='$(vDateBracke)'
+and not match(sale_service_id,'SH000723347')
+
+
+;
+
+
+start_state:
+left join(MPO_temp)
+Load 
+
+    zip as sale_start_zip_code,
+    state AS sale_start_state
+
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/zip_code_database.xls]
+(biff, embedded labels, table is zip_code_database$);
+
+
+end_state:
+left join(MPO_temp)
+load
+
+    zip as sale_end_zip_code,
+    state AS sale_end_state
+
+
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/zip_code_database.xls]
+(biff, embedded labels, table is zip_code_database$);
+
+mpo_pu:
+left join(MPO_temp)
+LOAD
+
+    sale_service_id,
+    date(sale_all_events_actual_datetime) as sale_actual_start_date
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_All_Events.qvd]
+(qvd)
+where match(sale_all_events_event_code,$(vPUEvent));
+
+
+
+[MPO]:
+concatenate(sale_basic_temp_1)
+LOAD
+    *
+resident MPO_temp;
+
+drop table MPO_temp;
+
+
+left join(sale_basic_temp_1)
+load
+    cso_number as sale_service_id,
+    'Out' as exclude_data_model
+    
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/SQTSCS/CP Netting.xlsx]
+(ooxml, embedded labels, table is [Exclude Data Model]);

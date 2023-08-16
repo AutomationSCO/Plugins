@@ -1,0 +1,54 @@
+// 35. Late Chargeable Weight-----------------------------------------------------------------------------------------------------
+[cp_chargeable_weight_temp]:
+left keep(buy_basic)
+Load Distinct
+    buy_service_id as cp_cw_buy,
+    buy_service_id
+
+resident buy_basic
+where wildmatch(Carrier,'AIT_WW','GEO LOG US','MCCOLLISTE','STI','MACKIE','MAINFRET','GEODIS FF')
+and buy_creation_date > '18/10/2021';
+
+
+[cp_chargeable_weight_temp]: 
+left join(cp_chargeable_weight_temp)
+LOAD
+    buy_service_id as cp_cw_buy,
+    date("buy_LastEvent_update_datetime ") as cp_cw_21_actual_date
+
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_buy_LastBE.qvd](qvd)
+where buy_LastEvent_code= '21';
+
+
+[cp_chargeable_weight]:
+left join(cp_chargeable_weight_temp)
+LOAD
+    buy_service_id as cp_cw_buy,
+    date("buy_LastEvent_update_datetime ") as cp_cw_71_actual_date
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_buy_LastBE.qvd](qvd)
+where buy_LastEvent_code= '71';
+
+left join(cp_chargeable_weight_temp)
+Load  distinct
+    DIMC,
+    buy_service_id as cp_cw_buy
+
+resident DIMC;
+
+
+[cp_chargeable_weight]:
+noconcatenate
+Load distinct
+    *,   
+    NetWorkDays(cp_cw_71_actual_date,cp_cw_21_actual_date)-1 as cp_71_vs_21,
+    'Incorrect' as cp_late_cw
+
+resident cp_chargeable_weight_temp
+where not match((NetWorkDays(cp_cw_71_actual_date,cp_cw_21_actual_date)-1),0)
+and len(trim(DIMC)) <2;
+;
+
+drop field DIMC from cp_chargeable_weight;
+Drop Table cp_chargeable_weight_temp;

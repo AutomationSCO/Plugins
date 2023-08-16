@@ -1,0 +1,10 @@
+let vDateBracke = date(addmonths('$(vToday)',-12),'DD/MM/YY');
+set vContractorZenith = 'IBM_FIGO','IBM_NCS';
+set vContractorMpo = 'No','No';
+set vContractorNAP = 'No','No';
+set vLane = 'Inter Team','Intra Team';
+set vGeo2Geo = 'APACAPAC','EMEAEMEA';
+set vAgency = 'No','No';
+set vStatus = 'CL','FINISHED','APP','CD','PLANNED','STARTED'
+
+

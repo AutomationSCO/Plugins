@@ -1,0 +1,94 @@
+[CP_customs_temp1]:
+left keep(sale_basic)
+load distinct
+
+    sale_service_id,
+    GEODIS_ops_Team
+
+resident sale_basic
+where not match(sale_end_country,sale_start_country)
+and Client <> 'IBM'
+and sale_service_execution_followup = 'CL'
+or
+Client = 'IBM'
+and sale_country2country = 'MX-US'
+and sale_service_execution_followup = 'CL'
+;
+//falta dejar solo FDX en el front end
+
+left join(CP_customs_temp1)
+load distinct
+    sale_service_id,
+    buy_service_id
+
+resident [sale-buy];
+
+left join(CP_customs_temp1)
+load distinct
+    buy_service_id,
+    Carrier
+
+resident buy_basic;
+
+left join(CP_customs_temp1)
+LOAD
+    CSO as sale_service_id,
+    1 as net_pending_customs
+    
+FROM [lib://Geo_AMS/Automation/file_operations/to_qlik/Nettings_Report.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq)
+where Netting = 'Pending Customs';
+
+
+CP_customs_temp:
+left keep(CP_customs_temp1)
+load distinct
+    sale_service_id
+
+resident CP_customs_temp1
+where match(Carrier,'MILL_CREEK','INNOVATIVO','ESGARI_MX','FEDEX')
+and len(net_pending_customs)= 0
+or GEODIS_ops_Team = 'Inter Team'
+and len(net_pending_customs)= 0;
+
+drop table CP_customs_temp1;
+
+
+[CP_customs]:
+left keep(CP_customs_temp)
+load distinct
+    sale_service_id as sale_service_id,
+    sale_service_id as sale_cp_customs_sale_service_id,
+    sale_event_code as sale_cp_customsBE
+    
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_BE.qvd]
+(qvd)
+where app_source = 'Zenith'
+and match(sale_event_code,'CT','CU')
+;
+
+drop table [CP_customs_temp];
+
+[CP_Customs_qty]:
+left join(CP_customs)
+load distinct
+    sale_cp_customs_sale_service_id,
+    count(sale_cp_customsBE) as sale_cp_customsqty
+
+resident [CP_customs]
+group by sale_cp_customs_sale_service_id;
+
+cp_customs:
+noconcatenate
+load distinct
+    *,
+    'Incorrect' as sale_cp_customs
+resident CP_customs
+where sale_cp_customsqty <> 2;
+
+drop table CP_customs;
+
+//Store [cp_customs] into [lib://Geo_AMS/LogisticsAnalyst/Plugins/Reports/cp_customs.csv](txt);
+
+

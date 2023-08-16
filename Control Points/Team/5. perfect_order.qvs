@@ -1,0 +1,9 @@
+left keep(sale_basic)
+LOAD
+    sale_service_id,
+    sale_control_point as po_control_point,
+    data_owner as po_data_owner,
+    scope as po_scope,
+    report_day as po_report_day
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/Perfect Order/perfect_order_current.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);

@@ -1,0 +1,92 @@
+sale_tariff_items_temp_temp:
+LEFT KEEP (sale_basic)
+load distinct
+	sale_service_id,
+	num(AddMonths(MonthStart(sale_actual_end_date,'00'),-1)) as sale_tariff_end_date_min
+
+resident sale_basic;
+
+
+
+LEFT join(sale_tariff_items_temp_temp)
+LOAD
+    sale_service_id,
+	//SALE_Operation_Number as sale_full_invoice_number,
+	sale_unit_price as sale_tariff_unit_price,
+	sale_unit_price_forced as sale_tariff_unit_price_forced,
+    sale_tarif_label AS sale_tariff_item,
+    sale_indicator_wording AS sale_tariff_indicator_wording,
+	//sale_amount_YtdEur as sale_tariff_eur_amount,
+    sale_amount AS sale_tariff_amount,	
+    sale_currency AS sale_tariff_currency,
+    sale_invoiced_quantity AS sale_tariff_invoiced_quantity,
+    sale_realized_quantity AS sale_tariff_real_quantity,
+    sale_invoicing_profile_id AS sale_tariff_invoicing_profile,
+    if(wildmatch(sale_tarif_label,'*FSC*','*FUEL*'),'FSC',
+	    if(wildmatch(sale_tarif_label,'*AD HOC*','*ADHOC*','*COVID*'),'ADHOC',
+    	    if(wildmatch(sale_tarif_label,'*SSC*','*SECURITY*'),'SECURITY SURCHARGE',
+        	    if(wildmatch(sale_tarif_label,'*FREIGHT*','*HWA*','*LINEHAUL*','BONDED DELIVERY TO EL PASO','Bonded Delivery To El Paso','LTL','FTL'),'FREIGHT',
+            	    if(wildmatch(sale_tarif_label,'*HAZMAT*', '*MAGNET*','*LITHI*'),'HAZMAT',
+                	    if(wildmatch(sale_tarif_label,'*INSIDE DELIVERY*'),'INSIDE DELIVERY',
+                    	    if(wildmatch(sale_tarif_label,'*INSIDE PICK*','INSIDE PICK-UP'),'INSIDE PICKUP',
+                        	    if(wildmatch(sale_tarif_label,'*SPECIFIC TIME*','*APPOINTMENT*'),'APPOINTMENT',
+                            	    if(wildmatch(sale_tarif_label,'*LABOR*'),'LABOR',
+                                	    if(wildmatch(sale_tarif_label,'*SELF PAY*','*SELF PAID*'),'SELF PAY',
+                                    	    if(wildmatch(sale_tarif_label,'*ALREADY PAID*','*ALREADY PAY*'),'ALREADY PAY',
+                                        	    if(wildmatch(sale_tarif_label,'*PADDED*'),'PADDED VAN',
+                                            	    if(wildmatch(sale_tarif_label,'*SHRINK*','BUBBLE*'),'SHRINK WRAPPED',
+                                            		    if(wildmatch(sale_tarif_label,'*CARTON*','*CARTONS*'),'CARTON BOX',                                                		
+                                                    		if(wildmatch(sale_tarif_label,'*SCREENING*'),'SCREENING FEES',
+                                                        		if(wildmatch(sale_tarif_label,'*PALLET*'),'PALLETIZE',
+																	if(wildmatch(sale_tarif_label,'*PACKING*'),'PACKING & UNPACKING',
+																		if(wildmatch(sale_tarif_label,'*HANDLING*'),'PACKING & UNPACKING',
+																			if(wildmatch(sale_tarif_label,'*ATTEMPTED*','*Attempted*'),'ATTEMPTED',
+                                                        	
+                                                        	
+'Other'))))))))))))))))))) as sale_tariff_item_consolidated,
+
+    if(wildmatch(sale_tarif_label,'*FREIGHT*','*HWA*','*LINEHAUL*','BONDED DELIVERY TO EL PASO','Bonded Delivery To El Paso','LTL','FTL'),'FREIGHT',
+        if(wildmatch(sale_tarif_label,'*FSC*','*FUEL*'),'FSC', 'ACCESORIAL')) as sale_tariff_item_group
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Finance_facts.qvd] (qvd)
+//where len(SALE_Operation_Number) <>0
+;
+
+
+sale_tariff_items_temp:
+noconcatenate
+load
+	*,
+	sale_tariff_currency & '-'& 'EUR' & '-'&  sale_tariff_end_date_min  as sale_tariff_exchange_rate_id
+
+resident sale_tariff_items_temp_temp;
+
+drop table sale_tariff_items_temp_temp;
+
+
+
+
+left join(sale_tariff_items_temp)
+LOAD
+    //"ID Currency rate",
+    //"Origin currency code",
+    //"Target currency code",
+    //"Start date for rate validity",
+    "Currency rate" as sale_tariff_exchange_rate,
+    "ID Currency rate"  as sale_tariff_exchange_rate_id
+
+FROM [lib://Geo_AMS/Automation/BI/Finance/Exchange Rate/TC_database.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq);
+
+//drop field sale_service_id from sale_tariff_items_temp;
+
+sale_tariff_items:
+noconcatenate
+load
+	*,
+	if(sale_tariff_currency = 'EUR', sale_tariff_amount, sale_tariff_amount * sale_tariff_exchange_rate) as sale_tariff_eur_amount
+
+resident sale_tariff_items_temp;
+
+drop table sale_tariff_items_temp;
+

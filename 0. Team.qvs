@@ -1,0 +1,122 @@
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Real_Lane.qvs]) 
+//Mk: select the operational team
+[Team]:
+NoConcatenate
+Load distinct  
+    *,
+    if(len(sale_buy_id_temp) = 0, sale_service_id, sale_buy_id_temp) as sale_buy_id,
+
+    //if(sale_start_geo<>'AMS','Pick up in another Geo',
+     
+    if(match(Carrier&'-'&sale_start_zip_code&'-'&sale_end_zip_code,'CLANCY_MOV-NY-12601-NY-13760','CLANCY_MOV-NY-12531-NY-13760'),'Vendor Management',
+    
+    //Align Operations
+    if(match(Client,'ALIGN'),'Align Operations',
+
+    if(match(Client,'KYNDRYL'),'Kyndryl Operations',
+    //LLP
+    if(match(Client,'HID','SOLIDIGM','BP'),'LLP',
+        //NEW CO
+
+    if(not match(Client,'IBM','KYNDRYL','ARROW','TECHDATA','ALIGN','SOFTLAYER','MERGE'),'New Co',
+    
+    
+    //Intra US
+    if(GEODIS_ops_Team ='Intra Team' and not match(Right(hu_reference,1)&GEODIS_ops_Team,'AInter Team'),
+        (
+
+
+    // Carrier Management
+    if(match(Client,'ARROW','TECHDATA'),'Carrier Management',
+        if(match(sale_start_country&sale_end_country,'MXUS','MXCA') and wildmatch(sale_service_start_name,'*JABIL*','*MERCURY*') 
+                and (wildmatch(Carrier,'ESGARI*','INNO*') OR IBM_Transport_Mode='ROAD'), 'Carrier Management',
+            if(Carrier='MCCOLLISTE' and buy_executed_SLA='015' ,'Carrier Management',
+                //if(sale_start_zip_code='TX-76051','Carrier Management',
+                    if(match(sale_start_country&sale_end_country, 'MXUS','MXCA')and not match(sale_executed_SLA,'HC1') 
+                            and IsGNumber = 'Plant','Carrier Management',                        
+                        if(wildmatch(hu_reference,'*FOE','*R','*RT'), 'Carrier Management',
+                            if( 
+                                //sale_service_execution_followup =  'APP' and
+                                 match(sale_start_country&sale_end_country, 'CAUS', 'CAMX') 
+                                    and wildmatch(Carrier, 'CEVA*', 'FEDEX*', 'MILL*') ,'Carrier Management',
+                                        if(
+                                            //Match(sale_service_execution_followup, 'APP') and 
+                                            wildmatch(Carrier,'INNOVATIVO','TA*') 
+                                                and match(sale_start_country&sale_end_country,'USMX'),
+                            'Carrier Management',
+
+                            
+
+        //Vendor Management
+    if(GEODIS_ops_Team = 'Intra Team' and match(sale_start_country&sale_end_country, 'MXUS') and match(sale_executed_SLA,'HC1'), 'Vendor Management',
+    if(GEODIS_ops_Team = 'Intra Team' and match(sale_start_country&sale_end_country,'MXUS','MXCA') and Client='IBM' and len(hu_reference)=6 and left(hu_reference,1)=9 and sale_from_code<>'USMO' and not match(sale_start_zip_code,'TX-76051','NY-12531','IL-60666','CA-94080','IL-60018','CA-90502','CA-90501','NY-11430'),'Vendor Management',
+        if(GEODIS_ops_Team = 'Intra Team' and Client='SOFTLAYER' and match("sale_geo_to_geo",'AMS-AMS'),'Vendor Management',
+            if(GEODIS_ops_Team = 'Intra Team' and match(sale_start_zip_code,'TX-76051','NY-12531','IL-60666','CA-94080','IL-60018','CA-90502','CA-90501','NY-11430') and GEODIS_ops_Team = 'Intra Team', 'Vendor Management',
+                if(GEODIS_ops_Team = 'Intra Team' and sale_end_country='GU','Vendor Management',
+                        if(GEODIS_ops_Team = 'Intra Team' and Right(hu_reference,1)='A' and  match(Client,'IBM'),'Vendor Management',
+                            if(GEODIS_ops_Team = 'Intra Team' and match(sale_start_country&sale_end_country,'MXUS','MXCA') and wildmatch(sale_service_start_name,'*JABIL*','*FLEX*','*PARAGON*','*CISCO*','BDT*','FOXC*','MERCU*','SEAG*'), 'Vendor Management',                    
+                                if(GEODIS_ops_Team = 'Intra Team' and match(sale_start_zip_code,'TX-76051','NY-12531') and (Left(hu_reference,2)='HG' or Left(hu_reference,4)='BUDA' or Left(hu_reference,3)='IBM') and Right(hu_reference,1)='D','Vendor Management',
+                                    if(GEODIS_ops_Team = 'Intra Team' and sale_start_zip_code='NY-12531','Vendor Management',
+                                        if(GEODIS_ops_Team = 'Intra Team' and IsGNumber='Vendor','Vendor Management',
+                                            if(GEODIS_ops_Team = 'Intra Team' 
+                                                and match(sale_start_country&sale_end_country,'USUS','USCA','USPR','CACA'),'Vendor Management',
+                                                    if(wildmatch(Carrier, 'CEVA*', 'FEDEX*', 'MILLC*') 
+                                                        and Match(sale_start_country&'-'&sale_end_country, 'CA-US', 'CA-MX', 'US-MX')
+                                                            //and sale_service_execution_followup = 'APP'
+                                                            ,'Vendor Management', 
+                                                
+                                        
+    
+    
+    if(GEODIS_ops_Team = 'Intra Team', 
+    'Pending'))))))))))))))))))))),
+
+        if(sale_start_geo = 'APAC' or sale_end_geo = 'APAC','APAC',
+                if(sale_start_geo = 'EMEA' or sale_end_geo = 'EMEA' or sale_caribbean_flag = 'Yes' or sale_latam_flag = 'Yes','EMEA',
+                    'MX Imports')))))))) as PU_Team_Responsible,
+
+
+
+
+
+    //Delivery Team
+
+    
+    if(match(Client,'ALIGN'),'Align Operations',
+        if(match(Client,'KYNDRYL'),'Kyndryl Operations',
+        if(match(Client,'HID','SOLIDIGM','BP'),'LLP',
+        if(not match(Client,'IBM','KYNDRYL','ARROW','TECHDATA','ALIGN','SOFTLAYER','MERGE'),'New Co',
+                if(match(sale_start_country&sale_end_country, 'CAMX', 'USMX') 
+                        //and sale_service_execution_followup = 'CD'
+                        and WildMatch(Carrier, 'FEDEX*', 'CEVA*'), 'MX Imports',
+    //APAC EMEA
+    if(GEODIS_ops_Team = 'Inter Team' and match(Client,'IBM','SOFTLAYER','ARROW','TECHDATA','ALIGN','SOFTLAYER','MERGE')
+         and not match(sale_start_country&sale_end_country,'HUUS') and match(sale_end_city,'EL SALTO','EL SALTO CENTRO'), //temporal
+        if(sale_start_geo = 'EMEA' and match(sale_end_city,'EL SALTO','EL SALTO CENTRO'),'MX Imports',
+            /*if(sale_service_execution_followup = 'CD' 
+                    and (sale_start_country&sale_end_country) ='USMX' and match(Carrier, 'CEVA', 'FEDEX'), 'MX Imports',*/     
+                        if(sale_start_geo = 'APAC' or sale_end_geo = 'APAC','APAC',
+                            if(sale_start_geo = 'EMEA' 
+                                or sale_end_geo = 'EMEA' 
+                                    or sale_caribbean_flag = 'Yes' 
+                                        or sale_latam_flag = 'Yes', 'EMEA','MX Imports'))),(
+                
+    
+          
+    if(sale_end_country='GU','Carrier Management',
+                if(Client<>'IBM' AND match(sale_start_country&sale_end_country,'MXUS','USUS') 
+                    or Client = 'IBM' AND match(sale_start_country&sale_end_country,'HUUS') ,'Carrier Management',
+                        if(match(sale_start_country&sale_end_country,'MXCA') and Carrier='MILL_CREEK','Carrier Management',
+                            if(Match(sale_service_execution_followup,'CD') and 
+                                match(Carrier, 'MILL_CREEK','INNOVATIVOS','TA*') 
+                                        and match(sale_start_country&sale_end_country, 'CAMX', 'CAUS'),
+                                            'Carrier Management',
+                                                
+
+    if(sale_end_country='CA' or sale_country2country = 'MX-MX','Vendor Management',
+        if(match(Client,'IBM','SOFTLAYER'), 'Carrier Management','New Co'))))))))))))) as Del_Team_Responsible
+
+
+resident [Real_Lane];
+
+Drop table [Real_Lane];

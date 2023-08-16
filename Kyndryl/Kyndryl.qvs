@@ -1,0 +1,227 @@
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Kyndryl/0.1 Main kyndryl global.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/0. Main.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/1. Sale_Buy.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/4. HU_Items.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/6. kyndryl_specific_info.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/7. FA.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/11. Specific_data_all_clients.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/21. eorder_HU.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/33. eorder_hu_item.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/57. eorder_shipment_inner.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/72. hu_item_kyndryl.qvs]);
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/53. eorder_shipment_kyndryl.qvs]);
+
+
+$(Must_Include=[lib://Geo_AMS/Automation/BI/Plugins/Control Points/3. finance_input.qvs]);
+
+eorder2mpo_temp:
+noconcatenate
+load distinct
+
+    hu_reference
+
+resident Eorder_Shipment
+;
+
+
+
+left join(eorder2mpo_temp)
+load 
+    hu_reference,
+    sale_service_id
+
+resident sale_basic;
+
+
+eorder2mpo:
+noconcatenate
+load
+    'Incorrect' as cp_order_to_service,
+    hu_reference
+
+
+
+resident eorder2mpo_temp
+where len(trim(sale_service_id)) = 0 ;
+
+drop table eorder2mpo_temp;
+
+//-----------------------------------------------------------------------------------
+
+service_description_temp:
+noconcatenate
+LOAD
+sale_service_id,
+hu_reference,
+sale_status,
+sale_start_country,
+sale_end_country,
+IsGNumber,
+sale_service_hu
+
+resident sale_basic;
+
+
+
+
+outer join(service_description_temp)
+load
+hu_reference,
+eorder_shipment_service_portal,
+eorder_shipment_status_id,
+eorder_shipment_start_country,
+eorder_shipment_end_country
+
+resident Eorder_Shipment
+where len(hu_reference) <> 0;
+
+service_description:
+noconcatenate
+LOAD
+hu_reference,
+if(match(eorder_shipment_service_portal,'Storage_Including_Transport','Warehouse'), 'Storage Including Transport',
+	IF(eorder_shipment_service_portal ='Resale', 'Resale Including Transport',
+        IF(wildmatch(eorder_shipment_service_portal,'*Scrap*'), 'Scrap Including Transport',
+            if((sale_start_country <> sale_end_country or eorder_shipment_start_country <>  eorder_shipment_end_country ) and wildmatch(eorder_shipment_service_portal,'*Transpor*','*International*','*Center*','*Reverse*','* *','**'),'International Transport',
+                if((sale_start_country = sale_end_country or eorder_shipment_start_country =  eorder_shipment_end_country) and wildmatch(eorder_shipment_service_portal,'*Transpor*','*International*','*Data*','*Reverse*','**','* *'),'Domestic Transport & Relocation',
+                    if( match([eorder_shipment_status_id], 'EXECUTION','CI Signed','Document Creation'), 'Other/LLP',
+                        if(len(eorder_shipment_service_portal) = 0,'Domestic Transport & Relocation',eorder_shipment_service_portal)))))))
+
+as sale_service_description,
+1 as flag_temp
+
+
+
+RESIDENT service_description_temp
+where len(hu_reference) <> 0;
+
+drop table service_description_temp;
+
+
+//-------------------------------------------------------------------------------------
+RBC_Report:
+left keep(Eorder_Shipment)
+load distinct
+
+    hu_reference as "G-Number",
+    eorder_shipment_shipper_reference as "Shipper Reference",
+    eorder_shipment_status_id as "eOrder Status",
+    eorder_shipment_client_path as "eOrder Scope",
+    eorder_shipment_creation_date as "eOrder Creation Date",
+    eorder_shipment_start_country as "Ship From Country",
+    eorder_shipment_Start_Logistic_Point_Corporate_Name as "Ship From Company", 
+    eorder_shipment_end_country as "Ship To Country",
+    eorder_shipment_End_Logistic_Point_Corporate_Name as "Ship To Company",
+    date(eorder_shipment_planned_start_date) as "eOrder Pickup Date",
+    date(eorder_shipment_planned_end_date) as "eOrder Delivery Date",
+    if(not match(eorder_shipment_status_id,'EXECUTION','Executed','CANCELLED','Cancelled'),
+        if(eorder_shipment_planned_start_date > '$(vToday)','On Time','Late')) as KPI
+
+resident Eorder_Shipment
+where wildmatch(eorder_shipment_Start_Logistic_Point_Corporate_Name,'*RBC*')  ;
+
+left join(RBC_Report)
+load distinct
+
+    hu_reference as "G-Number",
+    sale_service_id as "CSO Number",
+    sale_status as "CSO Status"
+
+resident sale_basic;
+
+left join(RBC_Report)
+load distinct
+
+    sale_service_id as "CSO Number",
+    sale_hu_compum_internal_id
+
+resident hu_compum;
+
+left join(RBC_Report)
+load distinct
+
+    sale_hu_compum_internal_id,
+    sale_HU_case_number as "Case Number"
+
+resident hu_items;
+
+Store [RBC_Report] into [lib://Geo_AMS/Automation/BI/Reports/RBC_Report.csv](txt);
+
+drop table RBC_Report;
+
+
+kyndryl_xdock_temp:
+left keep(Eorder_Shipment)
+load distinct
+
+    hu_reference as "G-Number",
+    eorder_shipment_shipper_reference as "Shipper Reference",
+    eorder_shipment_status_id as "eOrder Status",
+    eorder_shipment_client_path as "eOrder Scope",
+    date(eorder_shipment_creation_date,'MM/DD/YYYY')  as "eOrder Creation Date",
+    eorder_shipment_start_country as "Ship From Country",
+    eorder_shipment_Start_Logistic_Point_Corporate_Name as "Ship From Company", 
+    eorder_shipment_end_country as "Ship To Country",
+    eorder_shipment_End_Logistic_Point_Corporate_Name as "Ship To Company",
+    date(eorder_shipment_planned_start_date,'MM/DD/YYYY') as "eOrder Pickup Date",
+    date(eorder_shipment_planned_end_date,'MM/DD/YYYY') as "eOrder Delivery Date",
+    if(not match(eorder_shipment_status_id,'EXECUTION','Executed','CANCELLED','Cancelled'),
+        if(eorder_shipment_planned_start_date > '$(vToday)','On Time','Late')) as KPI
+
+resident Eorder_Shipment
+where eorder_shipment_client_path = 'GEODIS.Kyndryl.Crossdock'  ;
+
+left join(kyndryl_xdock_temp)
+load distinct
+
+    hu_reference as "G-Number",
+    sale_service_id as "CSO Number",
+    sale_status as "CSO Status",
+    date(sale_actual_end_date,'MM/DD/YYYY') as "Delivery Date"
+
+resident sale_basic;
+
+left join(kyndryl_xdock_temp)
+load distinct
+
+    sale_service_id as "CSO Number",
+    sale_hu_compum_internal_id
+
+resident hu_compum;
+
+left join(kyndryl_xdock_temp)
+load distinct
+
+    sale_hu_compum_internal_id,
+    sale_HU_case_number as "Case Number"
+
+resident hu_items;
+
+kyndryl_xdock:
+load 
+    [CSO Number],
+    [G-Number],
+    [Shipper Reference],
+    [Case Number],
+    [eOrder Status],
+    [eOrder Scope],
+    [eOrder Creation Date],
+    [Ship From Country],
+    [Ship From Company],
+    [Ship To Country],
+    [Ship To Company],
+    [eOrder Pickup Date],
+    [eOrder Delivery Date],
+    [KPI],
+    [CSO Status],
+    "Delivery Date"
+    
+
+resident kyndryl_xdock_temp;
+
+drop table kyndryl_xdock_temp;
+Store [kyndryl_xdock] into [lib://Geo_AMS/Automation/BI/Reports/kyndryl_xdock.csv](txt);
+
+drop table kyndryl_xdock;
+

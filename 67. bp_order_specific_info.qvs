@@ -1,0 +1,30 @@
+bp_mpo_order_specific_info:
+left keep(mpo_order_service)
+LOAD
+    sale_customer_order_systemid_BP as mpo_order_system_id,
+    //sale_customer_order_id as ,
+    //ilvc_id_co,
+    //app_source_CO_BP,
+    //sale_co_bp_record_date,
+    //bp_co_customer_status,
+    bp_co_shipment_specific as mpo_order_bp_shipment_specific,
+    bp_co_PO_creation_date as mpo_order_bp_PO_creation_date,
+    bp_co_additionalBuyerContactName as mpo_order_bp_additionalBuyerContactName,
+    bp_co_buyer_reference5 as mpo_order_bp_reference5,
+    //bp_co_reference2,
+    //bp_co_version,
+    //bp_co_Payer_Party,
+    //bp_co_Buyer_Phone_Number,
+    //bp_co_Customer_Region,
+    //bp_co_reference3,
+    //bp_co_reference4,
+    //bp_co_reference5,
+    //bp_co_reference6,
+    //bp_co_reference7,
+    //bp_co_reference8,
+    //bp_co_reference9,
+    //bp_co_reference10
+    bp_co_additionalBuyerContactEmail as mpo_order_bp_additionalBuyerContactEmail
+FROM [lib://SCO-BI-Common Shared Data  Row/GEOFLOW_CO_BP.qvd]
+(qvd);
+

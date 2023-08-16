@@ -1,0 +1,79 @@
+full_ST_temp_temp:
+noconcatenate
+load distinct
+    buy_service_id,
+    num(AddMonths(MonthStart(buy_actual_end_date),-1),'00') as buy_actual_end_date_min
+
+resident buy_basic;
+
+
+
+left join(full_ST_temp_temp)
+LOAD DISTINCT
+    buy_service_id,
+    buy_invoice_number_line as buy_full_invoice_number,
+    buy_invoice_systemid
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_InvoiceLines_Service.qvd] (qvd)
+;
+
+
+left join(full_ST_temp_temp)
+LOAD DISTINCT
+    buy_invoice_number as buy_full_invoice_number,
+    buy_invoice_status as buy_full_invoice_status,
+    buy_invoice_accountant_date as buy_full_invoice_accountant_date,
+    buy_invoice_date as buy_full_invoice_date,
+    buy_invoice_creation_date as buy_full_invoice_creation_date,
+    buy_invoice_update_date as buy_full_invoice_update_date,
+    buy_invoice_amount_ati as buy_full_invoice_amount_net,
+    buy_invoice_amount_et as buy_full_invoice_amount_gross,
+    buy_invoice_currency as buy_full_invoice_currency,
+    buy_invoice_type as buy_full_invoice_type,
+    buy_invoice_nature as buy_full_invoice_nature,
+    buy_invoice_creation_user_id as buy_full_invoice_creation_user_id,
+    buy_invoice_update_user_id as buy_full_invoice_update_user_id,
+    buy_invoice_soldee as buy_full_invoice_soldee,
+    buy_invoice_supplier_invoice_reference as buy_full_invoice_supplier_invoice_reference,
+    buy_invoice_internal_po_number as buy_full_invoice_internal_po_number,
+    buy_invoice_external_po_number as buy_full_invoice_external_po_number
+
+
+    
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Buy_Invoice.qvd] (qvd)
+;
+
+full_ST_temp:
+Load distinct
+    *,
+    buy_full_invoice_currency & '-'& 'EUR' & '-'&  buy_actual_end_date_min  as buy_full_exchange_rate_id
+
+resident full_ST_temp_temp
+//where not match(buy_full_invoice_type,'PRE_INVOICE')
+;
+
+
+drop table full_ST_temp_temp;
+
+left join(full_ST_temp)
+LOAD
+    //"ID Currency rate",
+    //"Origin currency code",
+    //"Target currency code",
+    //"Start date for rate validity",
+    "Currency rate" as buy_full_exchange_rate ,
+    "ID Currency rate"  as buy_full_exchange_rate_id
+
+FROM [lib://Geo_AMS/Automation/BI/Finance/Exchange Rate/TC_database.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq);
+
+
+full_ST:
+Load distinct
+*,
+buy_full_exchange_rate * buy_full_invoice_amount_gross as buy_full_invoice_eur_amount_gross,
+buy_full_exchange_rate * buy_full_invoice_amount_net as buy_full_invoice_eur_amount_net
+
+resident full_ST_temp;
+
+drop table full_ST_temp;

@@ -1,0 +1,23 @@
+solidigm_eorder_shipment_specific_info:
+left keep(Eorder_Shipment)
+LOAD
+    SOLIDIGM_Sale_Service_systemid as eorder_shipment_system_id,
+    SOLIDIGM_Sale_Service_Shipment_Information_consolidationKey as eorder_shipment_SOLIDIGM_Sale_Service_Shipment_Information_consolidationKey,
+    SOLIDIGM_sale_service_ModeOfTransport as eorder_shipment_SOLIDIGM_sale_service_ModeOfTransport,
+    SOLIDIGM_Sale_Service_Shipment_Information_SCAC as eorder_shipment_SOLIDIGM_SCAC,
+    SOLIDIGM_Sale_Service_Shipment_Information_LegalEntity as eorder_shipment_SOLIDIGM_Information_LegalEntity, 
+    SOLIDIGM_Sale_Service_Shipment_Information_ShippingConditions as eorder_shipment_SOLIDIGM_ShippingConditions,
+    SOLIDIGM_Sale_Service_Shipment_Information_ShippingConditionsText as eorder_shipment_SOLIDIGM_ShippingConditionsText,
+    SOLIDIGM_Sale_Service_Shipment_Information_LoadingPoint as eorder_shipment_SOLIDIGM_LoadingPoint,
+    SOLIDIGM_Sale_Service_Shipment_Information_LoadingPointText as eorder_shipment_SOLIDIGM_LoadingPointText,
+    SOLIDIGM_Sale_Service_Shipment_Information_Netweight_GRM as eorder_shipment_SOLIDIGM_Netweight_GRM,
+    SOLIDIGM_Sale_Service_Shipment_Information_RouteCode as eorder_shipment_SOLIDIGM_RouteCode ,
+    SOLIDIGM_Sale_Service_Shipment_Information_Incoterm as eorder_shipment_SOLIDIGM_Incoterm,
+    SOLIDIGM_Sale_Service_Shipment_Information_Service_Level as eorder_shipment_SOLIDIGM_Service_Level,
+    SOLIDIGM_Sale_Service_Shipment_Information_SpecialInstruction as eorder_shipment_SOLIDIGM_specialInstruction,
+    SOLIDIGM_Sale_Service_Shipment_Information_HAWB as eorder_shipment_SOLIDIGM_hawb,
+    SOLIDIGM_Sale_Service_Shipment_Information_TotalWeightLbs as eorder_shipment_SOLIDIGM_total_weight_lbs
+
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service_SOLIDIGM.qvd]
+(qvd);

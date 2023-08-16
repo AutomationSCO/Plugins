@@ -1,0 +1,14 @@
+ff_email:
+LOAD
+    SSO as ff_sso,
+    [Start Name] as ff_start_name,
+    [End City] as ff_end_city,
+    [Current Status] as ff_current_status,
+    status_date as ff_status_date,
+    buy_planned_start_date as ff_Planned_Start_Date,
+    Comments as ff_comments
+FROM [lib://Geo_AMS/LogisticsAnalyst/Plugins/Reports/FF_email.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);
+
+
+

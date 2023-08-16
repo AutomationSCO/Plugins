@@ -1,0 +1,6 @@
+let vDateBracke = date(addmonths('$(vToday)',-12),'DD/MM/YY');
+set vContractorZenith = 'NEWCUS','No';
+set vContractorMpo = 'COMPUTACENTER','SCO_COMPUTACENTER';
+set vContractorNAP = 'No','No';
+set vLane = 'Inter Team','Intra Team';
+set vGeo2Geo = 'No','No';

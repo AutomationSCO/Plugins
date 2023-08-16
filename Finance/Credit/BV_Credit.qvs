@@ -1,0 +1,124 @@
+$(Must_Include=[lib://Geo_AMS/LogisticsAnalyst/Plugins/0. Main.qvs]);
+
+db_credit:
+NoConcatenate
+LOAD
+    Dependency as credit_db_dependency,
+    Team as credit_db_team,
+    "Rejection days" as credit_db_rejection_days,
+    ExtractedDate as credit_db_ExtractedDate,
+    AXCompanyCode as credit_db_AXCompanyCode,
+    Invoice as sale_full_invoice_ax_key,
+    CustomerID as credit_db_CustomerID,
+    CustomerName as credit_db_CustomerName,
+    PaymTerm as credit_db_PaymTerm,
+    Voucher as credit_db_Voucher,
+    Invoice as credit_db_Invoice,
+    DocumentDate as credit_db_DocumentDate,
+    TransCurrency as credit_db_TransCurrency,
+    DueDate as credit_db_DueDate,
+    year(DueDate) as credit_db_Dueyear,
+    if(DueDate < MonthEnd('$(vToday)'),'EOM','Current') as credit_db_eom,
+    Closed as credit_db_Closed,
+    ClosedDate as credit_db_ClosedDate,
+    GrossAmountCur as credit_db_GrossAmountCur,
+    GrossOpenAmountCur as credit_db_GrossOpenAmountCur,
+    LastSettleVoucher as credit_db_LastSettleVoucher,
+    "EUR Invoiced Amount" as credit_db_EUR_Invoiced_Amount,
+    "EUR Balance" as credit_db_EUR_Balance,
+    Overdue as credit_db_Overdue,
+    "Invoice Status" as credit_db_Invoice_Status,
+    "Service Type" as credit_db_Service_Type,
+    "Gross amount" as credit_db_Gross_amount,
+    "System update user" as credit_db_System_update_user,
+    "Customer type" as credit_db_Customer_type,
+    "Reason code" as credit_db_Reason_code,
+    "Paid/Cancelled" as credit_db_paid_cancelled,
+    "Rejection date" as credit_db_Rejection_date,
+    year("Rejection date") as credit_db_rejection_year,
+    "Scheduled for payment date" as credit_db_Scheduled_for_payment_date,
+    "Rejection reason" as credit_db_Rejection_reason,
+    "Rejection comment" as credit_db_Rejection_comment,
+    year(DueDate) & '-' & num(month(DueDate),'00') as credit_due_date_yearmonth,
+    year(DueDate) & '-' & num(week(DueDate),'00') as credit_due_date_yearweek,
+    year(DueDate) & '-' & num(week(DueDate),'00') as credit_schduled_payment_yearweek,
+    year(DueDate) & '-' & num(month(ClosedDate),'00') as credit_closed_yearmonth,
+    if(len(ClosedDate) = 0, 'No Paid','Paid') as credit_paid_date_flag,
+    if(wildmatch(Voucher,'RTI*') and "EUR Invoiced Amount" < 0,'Credit Note',
+        if(wildmatch(Voucher,'RTI*','RFIV*') and "EUR Invoiced Amount" > 0,'Invoice','Cash Not Allocated')) as credit_db_document_type,
+
+    if(Closed = 0,
+    if(DueDate <= '$(vToday)','Incorrect','Correct')) as credit_db_overdue_KPI,
+
+    if('$(vToday)' - DueDate <= 0,'1. On Time',
+        if('$(vToday)' - DueDate <= 30, '2. 1 - 30 Days',
+            if('$(vToday)' - DueDate <= 90, '3. 31 - 90 Days', 
+               if('$(vToday)' - DueDate <= 180, '4. 91 - 180 Days',  '5. >180 Days (Bad Debt)'))))  
+            
+            as credit_db_overdue_aging,
+
+    if(ClosedDate - DueDate <= 0,'On Time',
+        if(ClosedDate - DueDate <= 10,'1 - 10 Days','Delayed')) as credit_db_on_time_payment,
+
+    if(wildmatch(Voucher,'RTI*','RFIV*') and "EUR Invoiced Amount" > 0 and "Paid/Cancelled" = 'Paid' and Closed = 1,'Settled','To Settled') as credit_db_settled_kpi,
+
+    if(wildmatch(Voucher,'RTI*','RFIV*') and "EUR Invoiced Amount" > 0 and "Paid/Cancelled" = 'Paid' and Closed = 1 ,"EUR Invoiced Amount","EUR Balance") as credit_db_settled_amount
+
+FROM [lib://Geo_AMS/O2C AMS/Dashboard Credit/Invoice/Credit Data base 2023.xlsx]
+(ooxml, embedded labels, table is [Data Base]);
+
+
+
+
+left join(db_credit)
+load
+
+    sale_invoice_number as sale_full_invoice_number,
+    if(wildmatch(sale_invoice_number,'INV*'),sale_invoice_part_number, sale_invoice_number) as sale_full_invoice_ax_key
+
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_sale_Invoice.qvd] (qvd)
+where sale_invoice_status <> 'CANCELLED'
+;
+
+
+sale_pivot:
+left keep(db_credit)
+LOAD DISTINCT
+    sale_service_id,
+    sale_invoice_number as sale_full_invoice_number
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_InvoiceLines_Service.qvd] (qvd)
+;
+
+
+not_posted:
+Concatenate(db_credit)
+LOAD
+    sale_full_invoice_ax_key,
+    //sale_full_invoice_number,
+    //sale_full_invoice_amount_net,
+    sale_full_invoice_eur_amount_gross as credit_db_EUR_Balance,
+    sale_full_invoice_eur_amount_gross as credit_db_EUR_Invoiced_Amount,
+    0 as credit_db_Closed,
+    'Not Posted' as credit_db_Reason_code,
+    'Not Posted' as credit_db_Service_Type,
+    'Not Posted' as credit_db_document_type,
+    Client as credit_db_AXCompanyCode,
+    sale_executor_short_name as credit_db_CustomerID,
+    Client as credit_db_CustomerName,
+    'Correct' as credit_db_overdue_KPI,
+    'Current' as credit_db_Overdue
+    
+FROM [lib://Geo_AMS/Automation/BI/Reports/sale_invoice.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq)
+where cp_pending_to_invoice = 'Incorrect'
+and sale_full_invoice_follow_up =  '2. Not Invoiced'
+;
+
+Rates:
+LOAD
+    Currency as rates_currency,
+    "Rate" as rates_rate
+FROM [lib://Geo_AMS/O2C AMS/Dashboard Credit/Invoice/Credit Data base 2023.xlsx]
+(ooxml, embedded labels, table is Rules);

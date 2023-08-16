@@ -1,0 +1,11 @@
+sale_activity_report:
+left keep(sale_basic)
+LOAD
+    sale_service_system_id as sale_service_id,
+    sale_service_activity_report as sale_activity_report,
+    sale_service_activity_report_status as sale_activity_report_status,
+    sale_service_activity_report_validation_date,
+    sale_service_report_to_regenerate
+
+FROM [lib://SCO-BI-Common Shared Data  Row/Geoflow_Sale_Service.qvd]
+(qvd);

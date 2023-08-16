@@ -1,0 +1,59 @@
+IPU_temp:
+noconcatenate
+load DISTINCT
+    hu_reference,
+    1 as eorder_accesorial_required
+resident Eorder_Order_accesorials
+where eorder_order_acc_IPU = '-1';
+
+
+
+left join(IPU_temp)
+load DISTINCT
+    sale_service_id,
+    hu_reference
+resident sale_basic;
+
+left join(IPU_temp)
+load DISTINCT
+    sale_service_id,
+    1 as zenith_accesorial_flag
+resident sale_tariff_items
+where sale_tariff_item_consolidated = 'INSIDE PICKUP';
+
+
+IPU:
+noconcatenate
+load DISTINCT
+    sale_service_id,
+    'Incorrect' as cp_accesorial_IPU
+resident IPU_temp
+where len(trim(zenith_accesorial_flag)) = 0;
+
+drop table IPU_temp;
+
+IPU_rpa_temp:
+noconcatenate
+load DISTINCT
+    *   
+resident IPU;
+
+left join(IPU_rpa_temp)
+load distinct 
+    sale_service_id,
+    sale_invoice_follow_up
+resident FA;
+
+IPU_rpa:
+noconcatenate
+load DISTINCT
+    sale_service_id as 'Service Number',
+    1 as 'INSIDE PICK-UP | Invoiced quantity'
+resident IPU_rpa_temp
+where sale_invoice_follow_up = '2. Not Invoiced' ;
+
+drop table IPU_rpa_temp;
+
+Store IPU_rpa into [lib://Geo_AMS/Automation\file_operations\from_qlik/Accesorial Automation/IPU_Order_rpa.csv](txt);
+
+drop table IPU_rpa;

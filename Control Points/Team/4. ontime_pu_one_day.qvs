@@ -1,0 +1,7 @@
+
+left join(sale_basic)
+Load  distinct
+    sale_service_id,
+    if(sale_requested_start_date + 1 >= sale_actual_start_date,1,0) as kpi_request_time_on_time_pickup_plus_one_day
+
+resident sale_basic;

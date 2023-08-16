@@ -1,0 +1,8 @@
+spm:
+left keep(sale_basic)
+LOAD
+    buy_service_id,
+    spm_kpi_tt,
+    tt_flag
+FROM [lib://Geo_AMS/Automation/BI/Plugins/Reports/SPM/SPM_global.csv]
+(txt, utf8, embedded labels, delimiter is ',', msq);

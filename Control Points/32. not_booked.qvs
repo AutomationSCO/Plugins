@@ -1,0 +1,35 @@
+//4. cp_not_booked--------------------------------------------------------------------------------------------------- 
+
+[cp_not_booked_temp]:
+noconcatenate
+Load distinct
+    sale_service_id  
+
+
+resident sale_basic
+where not match(sale_service_short_name,'IBM_MD_US/GSP','IBMMAFDXGSP/US','IBM_MD_US/GSP')
+and GEODIS_ops_Team = 'Inter Team'
+and match(sale_service_execution_followup,'CD','APP')
+and not match(net_flag,1)
+;
+
+left join(cp_not_booked_temp)
+load distinct 
+    sale_service_id,
+    1 as flag
+
+resident db_booking_details;
+
+
+cp_not_booked:
+noconcatenate
+load
+    sale_service_id,
+    'Incorrect' as cp_db_not_booked
+
+resident cp_not_booked_temp;
+
+drop table cp_not_booked_temp;
+
+
+

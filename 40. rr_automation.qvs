@@ -1,0 +1,10 @@
+rr_rpa:
+left keep(sale_service_specific_data)
+LOAD
+    "RateRequest ID" as sale_adhoc_reference,
+    "Service Country" as rr_service_country,
+    "Quote Cost" as rr_quote_cost,
+    Status as rr_status
+FROM [lib://Geo_AMS/O2C AMS/Automation/Apps/Rate Track Repository/rr_db.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq);
+

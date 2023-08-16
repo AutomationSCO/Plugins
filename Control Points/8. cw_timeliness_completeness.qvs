@@ -1,0 +1,111 @@
+// 45. Timeliness 71 -----------------------------------------------------------------------------------------
+[cp_completness_71_temp_1]:
+left keep(buy_basic)
+Load  distinct
+    buy_service_id,
+    buy_actual_end_date,
+    buy_service_execution_followup,
+    buy_actual_start_date
+
+resident buy_basic
+where match(Carrier,'AIT','CRST','STI','MCCOLLISTE','GEODIS FF','NIPPON')
+or
+Carrier = 'CEVA'
+and buy_start_city & buy_end_city <> 'CACA'
+;
+
+
+
+
+left join(cp_completness_71_temp_1)
+Load  distinct
+    buy_service_id,
+    if(len(trim(buy_LastEvent_code)) > 1,'Correct','No 71 Event') as cp_completness_71_temp,
+    buy_LastEvent_actual_date,
+    buy_LastEvent_creation_date
+
+
+resident buy_last_be 
+where match(buy_LastEvent_code,'71');
+
+
+left join(cp_completness_71_temp_1)
+Load  distinct
+    buy_service_id,
+    sale_service_id
+
+
+resident [sale-buy];
+
+left join(cp_completness_71_temp_1)
+Load  distinct
+    sale_service_id,
+    GEODIS_ops_Team,
+    sale_contractor_party_Group_N1
+    
+resident sale_basic;
+
+
+[cp_completness_71_temp]:
+noconcatenate
+load distinct
+    *,
+    if((networkdays(buy_actual_end_date,buy_LastEvent_creation_date)-1) <= 1,1,0) as kpi_timeliness_71,
+    if((networkdays(buy_actual_start_date,buy_LastEvent_creation_date)-1) <= 1,1,0) as kpi_timeliness_71_start_date,
+    (networkdays(buy_actual_end_date,buy_LastEvent_creation_date)-1) as kpi_timeliness_71_days
+
+resident cp_completness_71_temp_1
+where 
+GEODIS_ops_Team = 'Intra Team'
+and match(buy_service_execution_followup,'CL')
+and not match(sale_contractor_party_Group_N1,'IBM_NCS')
+or
+GEODIS_ops_Team = 'Inter Team'
+and match(buy_service_execution_followup,'CL','CD')
+and not match(sale_contractor_party_Group_N1,'IBM_NCS')
+
+;
+
+drop table cp_completness_71_temp_1;
+
+
+
+
+
+[cp_completness_71]:
+noconcatenate
+Load distinct
+
+    buy_service_id,
+    if(isnull(cp_completness_71_temp),'No Chargeable Weight Event',cp_completness_71_temp) as cp_completness_71
+
+
+resident cp_completness_71_temp
+//where len(net_cp_completness_AF) < 2
+;
+
+drop field cp_completness_71_temp;
+
+
+
+
+[kpi_timeliness_71]:
+noconcatenate
+Load distinct
+
+    buy_service_id,
+    buy_LastEvent_creation_date as buy_event_71_creation_date,
+    buy_LastEvent_actual_date as buy_event_71_actual_date,
+    kpi_timeliness_71_start_date,
+    kpi_timeliness_71,
+    kpi_timeliness_71_days,
+    if(kpi_timeliness_71_days < 0, 'Before delivery',
+        if(kpi_timeliness_71_days = 0, 'On delivery day',
+            if(kpi_timeliness_71_days <= 1, '1 Day after delivery', 
+                if(kpi_timeliness_71_days <= 5, '2-5 Days after delivery',
+                '5+ Days after delivery')))) as kpi_timeliness_71_aging
+
+resident cp_completness_71_temp;
+
+
+Drop Table  cp_completness_71_temp;
